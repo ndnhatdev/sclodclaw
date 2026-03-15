@@ -1,0 +1,72 @@
+# Development Environment for RedClaw Agentic Testing
+#
+# Use this for:
+# - Running the agent in a sandboxed environment
+# - Testing dangerous commands safely
+# - Developing new skills/integrations
+#
+# Usage:
+#   cd dev && ./cli.sh up
+#   or from root: ./dev/cli.sh up
+name: redclaw-dev
+services:
+  # ── The Agent (Development Image) ──
+  # Builds from source using the 'dev' stage of the root Dockerfile
+  redclaw-dev:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: dev
+    container_name: redclaw-dev
+    restart: unless-stopped
+    environment:
+      - REDCLAW_GATEWAY_PORT=42617
+      - SANDBOX_HOST=redclaw-sandbox
+    secrets:
+      - source: redclaw_env
+        target: redclaw_env
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - |
+        if [ -f /run/secrets/redclaw_env ]; then
+          set -a
+          . /run/secrets/redclaw_env
+          set +a
+        fi
+        exec redclaw gateway --port "${REDCLAW_GATEWAY_PORT:-42617}" --host "[::]"
+    volumes:
+      # Mount single config file (avoids shadowing other files in .redclaw)
+      - ../target/.redclaw/config.toml:/redclaw-data/.redclaw/config.toml
+      # Mount shared workspace
+      - ../playground:/redclaw-data/workspace
+    ports:
+      - "127.0.0.1:42617:42617"
+    networks:
+      - dev-net
+
+  # ── The Sandbox (Ubuntu Environment) ──
+  # A fully loaded Ubuntu environment for the agent to play in.
+  sandbox:
+    build:
+      context: sandbox # Context relative to dev/
+      dockerfile: Dockerfile
+    container_name: redclaw-sandbox
+    hostname: dev-box
+    command: ["tail", "-f", "/dev/null"]
+    working_dir: /home/developer/workspace
+    user: developer
+    environment:
+      - TERM=xterm-256color
+      - SHELL=/bin/bash
+    volumes:
+      - ../playground:/home/developer/workspace # Mount local playground
+    networks:
+      - dev-net
+
+networks:
+  dev-net:
+    driver: bridge
+
+secrets:
+  redclaw_env:
+    file: ../.env

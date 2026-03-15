@@ -1,0 +1,54 @@
+/target
+/target_t0013
+firmware/*/target
+web/dist/
+/apps/web/dist/*
+!/apps/web/dist/.gitkeep
+/%SystemDrive%/
+*.db
+*.db-journal
+.DS_Store
+._*
+.wt-pr37/
+__pycache__/
+*.pyc
+docker-compose.override.yml
+
+# Environment files (may contain secrets)
+.env
+
+# Python virtual environments
+
+.venv/
+venv/
+
+# ESP32 build cache (esp-idf-sys managed)
+
+.embuild/
+.env.local
+.env.*.local
+
+# Secret keys and credentials
+.secret_key
+*.key
+*.pem
+credentials.json
+.worktrees/
+.redclaw/*
+
+# Skill eval workspaces (test outputs, transcripts, grading)
+.claude/skills/*-workspace/
+
+# Local state backups
+.local-state-backups/
+*.local-state-backup/
+
+# Local refactor/rebrand scratch artifacts
+dev/backups/
+dev/rebrand_dry_run.log
+dev/rebrand_execute.log
+dev/rebrand_report.json
+dev/rebrand_report.md
+
+# Coverage artifacts
+lcov.info

@@ -1,0 +1,41 @@
+{
+  "id": "provider-openai-compatible",
+  "name": "Provider Openai Compatible",
+  "version": "0.1.0",
+  "kind": "provider",
+  "engine": {
+    "redhorse": ">=0.1.0 <0.2.0"
+  },
+  "artifact": {
+    "kind": "bundled",
+    "entry": "modules/providers/provider-openai-compatible"
+  },
+  "execution": {
+    "mode": "process"
+  },
+  "trust": {
+    "required": "official"
+  },
+  "capabilities": {
+    "requested": [],
+    "parameterized": []
+  },
+  "dependencies": [
+    {
+      "id": "runtime-native"
+    }
+  ],
+  "config": {
+    "schema": {},
+    "defaultFragment": {}
+  },
+  "activation": {
+    "events": [
+      "provider.activate"
+    ],
+    "safeModeEligible": true
+  },
+  "install": {
+    "source": "bundled"
+  }
+}

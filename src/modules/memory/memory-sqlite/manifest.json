@@ -1,0 +1,41 @@
+{
+  "id": "memory-sqlite",
+  "name": "Memory Sqlite",
+  "version": "0.1.0",
+  "kind": "memory",
+  "engine": {
+    "redhorse": ">=0.1.0 <0.2.0"
+  },
+  "artifact": {
+    "kind": "bundled",
+    "entry": "modules/memory/memory-sqlite"
+  },
+  "execution": {
+    "mode": "in_process"
+  },
+  "trust": {
+    "required": "official"
+  },
+  "capabilities": {
+    "requested": [],
+    "parameterized": []
+  },
+  "dependencies": [
+    {
+      "id": "runtime-native"
+    }
+  ],
+  "config": {
+    "schema": {},
+    "defaultFragment": {}
+  },
+  "activation": {
+    "events": [
+      "memory.activate"
+    ],
+    "safeModeEligible": true
+  },
+  "install": {
+    "source": "bundled"
+  }
+}

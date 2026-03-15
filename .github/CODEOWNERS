@@ -1,0 +1,32 @@
+# Default owner for all files
+* @ndnhatdev
+
+# Important functional modules
+/src/agent/** @ndnhatdev
+/src/providers/** @ndnhatdev
+/src/channels/** @ndnhatdev
+/src/tools/** @ndnhatdev
+/src/gateway/** @ndnhatdev
+/src/runtime/** @ndnhatdev
+/src/memory/** @ndnhatdev
+/Cargo.toml @ndnhatdev
+/Cargo.lock @ndnhatdev
+
+# Security / tests / CI-CD ownership
+/src/security/** @ndnhatdev
+/tests/** @ndnhatdev
+/.github/** @ndnhatdev
+/.github/workflows/** @ndnhatdev
+/.github/codeql/** @ndnhatdev
+/.github/dependabot.yml @ndnhatdev
+/SECURITY.md @ndnhatdev
+/docs/actions-source-policy.md @ndnhatdev
+/docs/ci-map.md @ndnhatdev
+
+# Docs & governance
+/docs/** @ndnhatdev
+/AGENTS.md @ndnhatdev
+/CLAUDE.md @ndnhatdev
+/CONTRIBUTING.md @ndnhatdev
+/docs/pr-workflow.md @ndnhatdev
+/docs/reviewer-playbook.md @ndnhatdev

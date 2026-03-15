@@ -1,0 +1,12 @@
+{
+  "id": "channel-cli",
+  "name": "CLI Channel",
+  "version": "0.1.0",
+  "kind": "channel",
+  "execution_mode": "in-process",
+  "description": "Command-line interface channel",
+  "dependencies": [
+    "runtime-native"
+  ],
+  "trust_tier": "official"
+}

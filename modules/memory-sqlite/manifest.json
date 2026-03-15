@@ -1,0 +1,12 @@
+{
+  "id": "memory-sqlite",
+  "name": "SQLite Memory Backend",
+  "version": "0.1.0",
+  "kind": "memory",
+  "execution_mode": "in-process",
+  "description": "SQLite-backed memory storage",
+  "dependencies": [
+    "runtime-native"
+  ],
+  "trust_tier": "official"
+}
