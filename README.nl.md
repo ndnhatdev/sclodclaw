@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="zeroclaw.png" alt="ZeroClaw" width="200" />
+  <img src="redclaw.png" alt="RedClaw" width="200" />
 </p>
 
-<h1 align="center">ZeroClaw 🦀</h1>
+<h1 align="center">RedClaw 🦀</h1>
 
 <p align="center">
   <strong>Nul overhead. Nul compromis. 100% Rust. 100% Agnostisch.</strong><br>
@@ -13,12 +13,12 @@
   <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache%202.0-blue.svg" alt="License: MIT OR Apache-2.0" /></a>
   <a href="NOTICE"><img src="https://img.shields.io/badge/contributors-27+-green.svg" alt="Contributors" /></a>
   <a href="https://buymeacoffee.com/argenistherose"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow.svg?style=flat&logo=buy-me-a-coffee" alt="Buy Me a Coffee" /></a>
-  <a href="https://x.com/zeroclawlabs?s=21"><img src="https://img.shields.io/badge/X-%40zeroclawlabs-000000?style=flat&logo=x&logoColor=white" alt="X: @zeroclawlabs" /></a>
-  <a href="https://zeroclawlabs.cn/group.jpg"><img src="https://img.shields.io/badge/WeChat-Group-B7D7A8?logo=wechat&logoColor=white" alt="WeChat Group" /></a>
+  <a href="https://x.com/redclawlabs?s=21"><img src="https://img.shields.io/badge/X-%40redclawlabs-000000?style=flat&logo=x&logoColor=white" alt="X: @redclawlabs" /></a>
+  <a href="https://redclawlabs.cn/group.jpg"><img src="https://img.shields.io/badge/WeChat-Group-B7D7A8?logo=wechat&logoColor=white" alt="WeChat Group" /></a>
   <a href="https://www.xiaohongshu.com/user/profile/67cbfc43000000000d008307?xsec_token=AB73VnYnGNx5y36EtnnZfGmAmS-6Wzv8WMuGpfwfkg6Yc%3D&xsec_source=pc_search"><img src="https://img.shields.io/badge/Xiaohongshu-Official-FF2442?style=flat" alt="Xiaohongshu: Official" /></a>
-  <a href="https://t.me/zeroclawlabs"><img src="https://img.shields.io/badge/Telegram-%40zeroclawlabs-26A5E4?style=flat&logo=telegram&logoColor=white" alt="Telegram: @zeroclawlabs" /></a>
-  <a href="https://www.facebook.com/groups/zeroclaw"><img src="https://img.shields.io/badge/Facebook-Group-1877F2?style=flat&logo=facebook&logoColor=white" alt="Facebook Group" /></a>
-  <a href="https://www.reddit.com/r/zeroclawlabs/"><img src="https://img.shields.io/badge/Reddit-r%2Fzeroclawlabs-FF4500?style=flat&logo=reddit&logoColor=white" alt="Reddit: r/zeroclawlabs" /></a>
+  <a href="https://t.me/redclawlabs"><img src="https://img.shields.io/badge/Telegram-%40redclawlabs-26A5E4?style=flat&logo=telegram&logoColor=white" alt="Telegram: @redclawlabs" /></a>
+  <a href="https://www.facebook.com/groups/redclaw"><img src="https://img.shields.io/badge/Facebook-Group-1877F2?style=flat&logo=facebook&logoColor=white" alt="Facebook Group" /></a>
+  <a href="https://www.reddit.com/r/redclawlabs/"><img src="https://img.shields.io/badge/Reddit-r%2Fredclawlabs-FF4500?style=flat&logo=reddit&logoColor=white" alt="Reddit: r/redclawlabs" /></a>
 </p>
 <p align="center">
 Gebouwd door studenten en leden van de Harvard, MIT en Sundai.Club gemeenschappen.
@@ -81,7 +81,7 @@ Gebouwd door studenten en leden van de Harvard, MIT en Sundai.Club gemeenschappe
 </p>
 
 <p align="center">
-  ZeroClaw is het <strong>runtime besturingssysteem</strong> voor agent workflows — een infrastructuur die modellen, tools, geheugen en uitvoering abstraheert om agenten één keer te bouwen en overal uit te voeren.
+  RedClaw is het <strong>runtime besturingssysteem</strong> voor agent workflows — een infrastructuur die modellen, tools, geheugen en uitvoering abstraheert om agenten één keer te bouwen en overal uit te voeren.
 </p>
 
 <p align="center"><code>Trait-gedreven architectuur · veilige runtime standaard · verwisselbare provider/kanaal/tool · alles is plugbaar</code></p>
@@ -92,8 +92,8 @@ Gebruik deze tabel voor belangrijke aankondigingen (compatibiliteitswijzigingen,
 
 | Datum (UTC) | Niveau      | Aankondiging                                                                                                                                                                                                                                                                                                                                                                                                              | Actie                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-02-19 | _Kritiek_  | **We zijn niet gelieerd** met `openagen/zeroclaw` of `zeroclaw.org`. Het domein `zeroclaw.org` wijst momenteel naar de fork `openagen/zeroclaw`, en dit domein/repository imiteert onze officiële website/project.                                                                                                                                                                                 | Vertrouw geen informatie, binaire bestanden, fondsenwerving of aankondigingen van deze bronnen. Gebruik alleen [deze repository](https://github.com/zeroclaw-labs/zeroclaw) en onze geverifieerde sociale media accounts.                                                                                                                                                                                                                                                                                                                                                          |
-| 2026-02-21 | _Belangrijk_ | Onze officiële website is nu online: [zeroclawlabs.ai](https://zeroclawlabs.ai). Bedankt voor je geduld tijdens het wachten. We detecteren nog steeds imitatiepogingen: neem niet deel aan enige investering/fondsenwerving activiteit in naam van ZeroClaw als deze niet via onze officiële kanalen wordt gepubliceerd.                                                                                                                   | Gebruik [deze repository](https://github.com/zeroclaw-labs/zeroclaw) als de enige bron van waarheid. Volg [X (@zeroclawlabs)](https://x.com/zeroclawlabs?s=21), [Telegram (@zeroclawlabs)](https://t.me/zeroclawlabs), [Facebook (groep)](https://www.facebook.com/groups/zeroclaw), [Reddit (r/zeroclawlabs)](https://www.reddit.com/r/zeroclawlabs/), en [Xiaohongshu](https://www.xiaohongshu.com/user/profile/67cbfc43000000000d008307?xsec_token=AB73VnYnGNx5y36EtnnZfGmAmS-6Wzv8WMuGpfwfkg6Yc%3D&xsec_source=pc_search) voor officiële updates. |
+| 2026-02-19 | _Kritiek_  | **We zijn niet gelieerd** met `openagen/redclaw` of `redclaw.org`. Het domein `redclaw.org` wijst momenteel naar de fork `openagen/redclaw`, en dit domein/repository imiteert onze officiële website/project.                                                                                                                                                                                 | Vertrouw geen informatie, binaire bestanden, fondsenwerving of aankondigingen van deze bronnen. Gebruik alleen [deze repository](https://github.com/redclaw-labs/redclaw) en onze geverifieerde sociale media accounts.                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-02-21 | _Belangrijk_ | Onze officiële website is nu online: [redclawlabs.ai](https://redclawlabs.ai). Bedankt voor je geduld tijdens het wachten. We detecteren nog steeds imitatiepogingen: neem niet deel aan enige investering/fondsenwerving activiteit in naam van RedClaw als deze niet via onze officiële kanalen wordt gepubliceerd.                                                                                                                   | Gebruik [deze repository](https://github.com/redclaw-labs/redclaw) als de enige bron van waarheid. Volg [X (@redclawlabs)](https://x.com/redclawlabs?s=21), [Telegram (@redclawlabs)](https://t.me/redclawlabs), [Facebook (groep)](https://www.facebook.com/groups/redclaw), [Reddit (r/redclawlabs)](https://www.reddit.com/r/redclawlabs/), en [Xiaohongshu](https://www.xiaohongshu.com/user/profile/67cbfc43000000000d008307?xsec_token=AB73VnYnGNx5y36EtnnZfGmAmS-6Wzv8WMuGpfwfkg6Yc%3D&xsec_source=pc_search) voor officiële updates. |
 | 2026-02-19 | _Belangrijk_ | Anthropic heeft de gebruiksvoorwaarden voor authenticatie en inloggegevens bijgewerkt op 2026-02-19. OAuth authenticatie (Free, Pro, Max) is exclusief voor Claude Code en Claude.ai; het gebruik van Claude Free/Pro/Max OAuth tokens in enig ander product, tool of service (inclusief Agent SDK) is niet toegestaan en kan in strijd zijn met de Consumenten Gebruiksvoorwaarden. | Vermijd tijdelijk Claude Code OAuth integraties om potentiële verliezen te voorkomen. Originele clausule: [Authentication and Credential Use](https://code.claude.com/docs/en/legal-and-compliance#authentication-and-credential-use).                                                                                                                                                                                                                                                                                                                      |
 
 ### ✨ Functies
@@ -103,18 +103,18 @@ Gebruik deze tabel voor belangrijke aankondigingen (compatibiliteitswijzigingen,
 - ⚡ **Snelle Koude Starts:** De single-binary Rust runtime houdt commando en daemon starts bijna direct voor dagelijkse operaties.
 - 🌍 **Draagbare Architectuur:** Een single-binary workflow op ARM, x86 en RISC-V met verwisselbare provider/kanaal/tool.
 
-### Waarom teams kiezen voor ZeroClaw
+### Waarom teams kiezen voor RedClaw
 
 - **Lichtgewicht standaard:** kleine Rust binary, snelle start, laag geheugengebruik.
 - **Veilig door design:** pairing, strikte sandboxing, expliciete allowlists, workspace scope.
 - **Volledig verwisselbaar:** kernsystemen zijn traits (providers, kanalen, tools, geheugen, tunnels).
 - **Geen vendor lock-in:** OpenAI-compatibele provider ondersteuning + plugbare custom endpoints.
 
-## Benchmark Snapshot (ZeroClaw vs OpenClaw, Reproduceerbaar)
+## Benchmark Snapshot (RedClaw vs OpenClaw, Reproduceerbaar)
 
 Snelle benchmark op lokale machine (macOS arm64, feb. 2026) genormaliseerd voor 0.8 GHz edge hardware.
 
-|                              | OpenClaw      | NanoBot        | PicoClaw        | ZeroClaw 🦀           |
+|                              | OpenClaw      | NanoBot        | PicoClaw        | RedClaw 🦀           |
 | ---------------------------- | ------------- | -------------- | --------------- | --------------------- |
 | **Taal**                  | TypeScript    | Python         | Go              | **Rust**              |
 | **RAM**                      | > 1 GB        | > 100 MB       | < 10 MB         | **< 5 MB**            |
@@ -122,10 +122,10 @@ Snelle benchmark op lokale machine (macOS arm64, feb. 2026) genormaliseerd voor 
 | **Binary Grootte**           | ~28 MB (dist) | N/A (Scripts)  | ~8 MB           | **3.4 MB**            |
 | **Kosten**                     | Mac Mini $599 | Linux SBC ~$50 | Linux board $10 | **Elke hardware $10** |
 
-> Opmerkingen: ZeroClaw resultaten worden gemeten op productie builds met `/usr/bin/time -l`. OpenClaw vereist de Node.js runtime (typisch ~390 MB extra geheugen overhead), terwijl NanoBot de Python runtime vereist. PicoClaw en ZeroClaw zijn statische binaries. De bovenstaande RAM cijfers zijn runtime geheugen; build-time compilatievereisten zijn hoger.
+> Opmerkingen: RedClaw resultaten worden gemeten op productie builds met `/usr/bin/time -l`. OpenClaw vereist de Node.js runtime (typisch ~390 MB extra geheugen overhead), terwijl NanoBot de Python runtime vereist. PicoClaw en RedClaw zijn statische binaries. De bovenstaande RAM cijfers zijn runtime geheugen; build-time compilatievereisten zijn hoger.
 
 <p align="center">
-  <img src="zero-claw.jpeg" alt="ZeroClaw vs OpenClaw Vergelijking" width="800" />
+  <img src="zero-claw.jpeg" alt="RedClaw vs OpenClaw Vergelijking" width="800" />
 </p>
 
 ### Reproduceerbare Lokale Meting
@@ -134,17 +134,17 @@ Benchmark beweringen kunnen afwijken naarmate code en toolchains evolueren, dus 
 
 ```bash
 cargo build --release
-ls -lh target/release/zeroclaw
+ls -lh target/release/redclaw
 
-/usr/bin/time -l target/release/zeroclaw --help
-/usr/bin/time -l target/release/zeroclaw status
+/usr/bin/time -l target/release/redclaw --help
+/usr/bin/time -l target/release/redclaw status
 ```
 
 Voorbeeld monster (macOS arm64, gemeten op 18 februari 2026):
 
 - Release binary grootte: `8.8M`
-- `zeroclaw --help`: werkelijke tijd ongeveer `0.02s`, piek geheugengebruik ~`3.9 MB`
-- `zeroclaw status`: werkelijke tijd ongeveer `0.01s`, piek geheugengebruik ~`4.1 MB`
+- `redclaw --help`: werkelijke tijd ongeveer `0.02s`, piek geheugengebruik ~`3.9 MB`
+- `redclaw status`: werkelijke tijd ongeveer `0.01s`, piek geheugengebruik ~`4.1 MB`
 
 ## Vereisten
 
@@ -218,22 +218,22 @@ Voorbeeld monster (macOS arm64, gemeten op 18 februari 2026):
 
 ### Optie 1: Geautomatiseerde setup (aanbevolen)
 
-Het `bootstrap.sh` script installeert Rust, kloont ZeroClaw, compileert het, en stelt je initiële ontwikkelomgeving in:
+Het `bootstrap.sh` script installeert Rust, kloont RedClaw, compileert het, en stelt je initiële ontwikkelomgeving in:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zeroclaw-labs/zeroclaw/master/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/redclaw-labs/redclaw/master/bootstrap.sh | bash
 ```
 
 Dit zal:
 
 1. Rust installeren (indien afwezig)
-2. De ZeroClaw repository klonen
-3. ZeroClaw compileren in release modus
-4. `zeroclaw` installeren in `~/.cargo/bin/`
-5. De standaard workspace structuur maken in `~/.zeroclaw/workspace/`
-6. Een initiële configuratie `~/.zeroclaw/workspace/config.toml` genereren
+2. De RedClaw repository klonen
+3. RedClaw compileren in release modus
+4. `redclaw` installeren in `~/.cargo/bin/`
+5. De standaard workspace structuur maken in `~/.redclaw/workspace/`
+6. Een initiële configuratie `~/.redclaw/workspace/config.toml` genereren
 
-Na de bootstrap, herlaad je shell of voer `source ~/.cargo/env` uit om het `zeroclaw` commando globaal te gebruiken.
+Na de bootstrap, herlaad je shell of voer `source ~/.cargo/env` uit om het `redclaw` commando globaal te gebruiken.
 
 ### Optie 2: Handmatige installatie
 
@@ -242,8 +242,8 @@ Na de bootstrap, herlaad je shell of voer `source ~/.cargo/env` uit om het `zero
 
 ```bash
 # 1. Kloon de repository
-git clone https://github.com/zeroclaw-labs/zeroclaw.git
-cd zeroclaw
+git clone https://github.com/redclaw-labs/redclaw.git
+cd redclaw
 
 # 2. Compileer in release
 cargo build --release --locked
@@ -252,11 +252,11 @@ cargo build --release --locked
 cargo install --path . --locked
 
 # 4. Initialiseer de workspace
-zeroclaw init
+redclaw init
 
 # 5. Verifieer de installatie
-zeroclaw --version
-zeroclaw status
+redclaw --version
+redclaw status
 ```
 
 </details>
@@ -266,7 +266,7 @@ zeroclaw status
 Eenmaal geïnstalleerd (via bootstrap of handmatig), zou je moeten zien:
 
 ```
-~/.zeroclaw/workspace/
+~/.redclaw/workspace/
 ├── config.toml          # Hoofdconfiguratie
 ├── .pairing             # Pairing geheimen (gegenereerd bij eerste lancering)
 ├── logs/                # Daemon/agent logs
@@ -276,14 +276,14 @@ Eenmaal geïnstalleerd (via bootstrap of handmatig), zou je moeten zien:
 
 **Volgende stappen:**
 
-1. Configureer je AI providers in `~/.zeroclaw/workspace/config.toml`
+1. Configureer je AI providers in `~/.redclaw/workspace/config.toml`
 2. Bekijk de [configuratie referentie](docs/config-reference.md) voor geavanceerde opties
-3. Start de agent: `zeroclaw agent start`
+3. Start de agent: `redclaw agent start`
 4. Test via je voorkeurskanaal (zie [kanalen referentie](docs/channels-reference.md))
 
 ## Configuratie
 
-Bewerk `~/.zeroclaw/workspace/config.toml` om providers, kanalen en systeemgedrag te configureren.
+Bewerk `~/.redclaw/workspace/config.toml` om providers, kanalen en systeemgedrag te configureren.
 
 ### Snelle Configuratie Referentie
 
@@ -322,7 +322,7 @@ kind = "native"    # of "docker" (vereist Docker)
 
 ### Huidige Runtime Ondersteuning
 
-ZeroClaw ondersteunt twee code uitvoeringsbackends:
+RedClaw ondersteunt twee code uitvoeringsbackends:
 
 - **`native`** (standaard) — directe procesuitvoering, snelste pad, ideaal voor vertrouwde omgevingen
 - **`docker`** — volledige container isolatie, versterkt beveiligingsbeleid, vereist Docker
@@ -333,32 +333,32 @@ Gebruik `runtime.kind = "docker"` als je strikte sandboxing of netwerkisolatie n
 
 ```bash
 # Workspace beheer
-zeroclaw init                # Initialiseert een nieuwe workspace
-zeroclaw status              # Toont daemon/agent status
-zeroclaw config validate     # Verifieert config.toml syntax en waarden
+redclaw init                # Initialiseert een nieuwe workspace
+redclaw status              # Toont daemon/agent status
+redclaw config validate     # Verifieert config.toml syntax en waarden
 
 # Daemon beheer
-zeroclaw daemon start        # Start de daemon in de achtergrond
-zeroclaw daemon stop         # Stopt de draaiende daemon
-zeroclaw daemon restart      # Herstart de daemon (config herladen)
-zeroclaw daemon logs         # Toont daemon logs
+redclaw daemon start        # Start de daemon in de achtergrond
+redclaw daemon stop         # Stopt de draaiende daemon
+redclaw daemon restart      # Herstart de daemon (config herladen)
+redclaw daemon logs         # Toont daemon logs
 
 # Agent beheer
-zeroclaw agent start         # Start de agent (vereist draaiende daemon)
-zeroclaw agent stop          # Stopt de agent
-zeroclaw agent restart       # Herstart de agent (config herladen)
+redclaw agent start         # Start de agent (vereist draaiende daemon)
+redclaw agent stop          # Stopt de agent
+redclaw agent restart       # Herstart de agent (config herladen)
 
 # Pairing operaties
-zeroclaw pairing init        # Genereert een nieuw pairing geheim
-zeroclaw pairing rotate      # Roteert het bestaande pairing geheim
+redclaw pairing init        # Genereert een nieuw pairing geheim
+redclaw pairing rotate      # Roteert het bestaande pairing geheim
 
 # Tunneling (voor publieke blootstelling)
-zeroclaw tunnel start        # Start een tunnel naar de lokale daemon
-zeroclaw tunnel stop         # Stopt de actieve tunnel
+redclaw tunnel start        # Start een tunnel naar de lokale daemon
+redclaw tunnel stop         # Stopt de actieve tunnel
 
 # Diagnostiek
-zeroclaw doctor              # Voert systeem gezondheidscontroles uit
-zeroclaw version             # Toont versie en build informatie
+redclaw doctor              # Voert systeem gezondheidscontroles uit
+redclaw version             # Toont versie en build informatie
 ```
 
 Zie [Commando's Referentie](docs/commands-reference.md) voor volledige opties en voorbeelden.
@@ -436,13 +436,13 @@ De bot reageert met AI-gegenereerde code, voert tools uit indien gevraagd, en be
 [channels.matrix]
 enabled = true
 homeserver_url = "https://matrix.org"
-username = "@zeroclaw:matrix.org"
+username = "@redclaw:matrix.org"
 password = "..."
-device_name = "zeroclaw-prod"
+device_name = "redclaw-prod"
 e2ee_enabled = true
 ```
 
-Nodig `@zeroclaw:matrix.org` uit in een versleutelde kamer, en de bot zal reageren met volledige encryptie. Zie [Matrix E2EE Gids](docs/matrix-e2ee-guide.md) voor apparaatverificatie setup.
+Nodig `@redclaw:matrix.org` uit in een versleutelde kamer, en de bot zal reageren met volledige encryptie. Zie [Matrix E2EE Gids](docs/matrix-e2ee-guide.md) voor apparaatverificatie setup.
 
 ### Multi-Provider
 
@@ -469,7 +469,7 @@ Als Anthropic faalt of rate-limit heeft, schakelt de orchestrator automatisch ov
 ```toml
 [memory]
 kind = "sqlite"
-path = "~/.zeroclaw/workspace/memory/conversations.db"
+path = "~/.redclaw/workspace/memory/conversations.db"
 retention_days = 90  # Automatische opruiming na 90 dagen
 ```
 
@@ -478,7 +478,7 @@ Of gebruik Markdown voor mens-leesbare opslag:
 ```toml
 [memory]
 kind = "markdown"
-path = "~/.zeroclaw/workspace/memory/"
+path = "~/.redclaw/workspace/memory/"
 ```
 
 Zie [Configuratie Referentie](docs/config-reference.md#memory) voor alle geheugenopties.
@@ -498,7 +498,7 @@ Zie [Configuratie Referentie](docs/config-reference.md#memory) voor alle geheuge
 
 ### Aangepaste Endpoints
 
-ZeroClaw ondersteunt OpenAI-compatibele endpoints:
+RedClaw ondersteunt OpenAI-compatibele endpoints:
 
 ```toml
 [providers.custom]
@@ -528,7 +528,7 @@ Zie [Kanalen Referentie](docs/channels-reference.md) voor volledige configuratie
 
 ## Tool Ondersteuning
 
-ZeroClaw biedt ingebouwde tools voor code-uitvoering, bestandssysteem toegang en web retrieval:
+RedClaw biedt ingebouwde tools voor code-uitvoering, bestandssysteem toegang en web retrieval:
 
 | Tool                | Beschrijving                 | Vereiste Runtime                |
 | -------------------- | --------------------------- | ----------------------------- |
@@ -559,8 +559,8 @@ Zie [Configuratie Referentie](docs/config-reference.md#runtime) voor volledige b
 ### Lokale Implementatie (Ontwikkeling)
 
 ```bash
-zeroclaw daemon start
-zeroclaw agent start
+redclaw daemon start
+redclaw agent start
 ```
 
 ### Server Implementatie (Productie)
@@ -572,19 +572,19 @@ Gebruik systemd om daemon en agent als services te beheren:
 cargo install --path . --locked
 
 # Configureer de workspace
-zeroclaw init
+redclaw init
 
 # Maak systemd service bestanden
-sudo cp deployment/systemd/zeroclaw-daemon.service /etc/systemd/system/
-sudo cp deployment/systemd/zeroclaw-agent.service /etc/systemd/system/
+sudo cp deployment/systemd/redclaw-daemon.service /etc/systemd/system/
+sudo cp deployment/systemd/redclaw-agent.service /etc/systemd/system/
 
 # Schakel in en start de services
-sudo systemctl enable zeroclaw-daemon zeroclaw-agent
-sudo systemctl start zeroclaw-daemon zeroclaw-agent
+sudo systemctl enable redclaw-daemon redclaw-agent
+sudo systemctl start redclaw-daemon redclaw-agent
 
 # Verifieer de status
-sudo systemctl status zeroclaw-daemon
-sudo systemctl status zeroclaw-agent
+sudo systemctl status redclaw-daemon
+sudo systemctl status redclaw-agent
 ```
 
 Zie [Netwerk Implementatie Gids](docs/network-deployment.md) voor volledige productie-implementatie instructies.
@@ -593,21 +593,21 @@ Zie [Netwerk Implementatie Gids](docs/network-deployment.md) voor volledige prod
 
 ```bash
 # Bouw de image
-docker build -t zeroclaw:latest .
+docker build -t redclaw:latest .
 
 # Draai de container
 docker run -d \
-  --name zeroclaw \
-  -v ~/.zeroclaw/workspace:/workspace \
+  --name redclaw \
+  -v ~/.redclaw/workspace:/workspace \
   -e ANTHROPIC_API_KEY=sk-ant-... \
-  zeroclaw:latest
+  redclaw:latest
 ```
 
 Zie [`Dockerfile`](Dockerfile) voor bouw-details en configuratie-opties.
 
 ### Edge Hardware
 
-ZeroClaw is ontworpen om te draaien op laagvermogen hardware:
+RedClaw is ontworpen om te draaien op laagvermogen hardware:
 
 - **Raspberry Pi Zero 2 W** — ~512 MB RAM, enkele ARMv8 core, < $5 hardware kosten
 - **Raspberry Pi 4/5** — 1 GB+ RAM, multi-core, ideaal voor gelijktijdige workloads
@@ -618,10 +618,10 @@ Zie [Hardware Gids](docs/hardware/README.md) voor apparaat-specifieke setup inst
 
 ## Tunneling (Publieke Blootstelling)
 
-Stel je lokale ZeroClaw daemon bloot aan het publieke netwerk via beveiligde tunnels:
+Stel je lokale RedClaw daemon bloot aan het publieke netwerk via beveiligde tunnels:
 
 ```bash
-zeroclaw tunnel start --provider cloudflare
+redclaw tunnel start --provider cloudflare
 ```
 
 Ondersteunde tunnel providers:
@@ -634,14 +634,14 @@ Zie [Configuratie Referentie](docs/config-reference.md#tunnel) voor volledige co
 
 ## Beveiliging
 
-ZeroClaw implementeert meerdere beveiligingslagen:
+RedClaw implementeert meerdere beveiligingslagen:
 
 ### Pairing
 
-De daemon genereert een pairing geheim bij de eerste lancering opgeslagen in `~/.zeroclaw/workspace/.pairing`. Clients (agent, CLI) moeten dit geheim presenteren om verbinding te maken.
+De daemon genereert een pairing geheim bij de eerste lancering opgeslagen in `~/.redclaw/workspace/.pairing`. Clients (agent, CLI) moeten dit geheim presenteren om verbinding te maken.
 
 ```bash
-zeroclaw pairing rotate  # Genereert een nieuw geheim en invalideert het oude
+redclaw pairing rotate  # Genereert een nieuw geheim en invalideert het oude
 ```
 
 ### Sandboxing
@@ -668,10 +668,10 @@ Zie [Beveiligingsdocumentatie](docs/security/README.md) voor volledig beleid en 
 
 ## Observeerbaarheid
 
-ZeroClaw logt naar `~/.zeroclaw/workspace/logs/` standaard. Logs worden per component opgeslagen:
+RedClaw logt naar `~/.redclaw/workspace/logs/` standaard. Logs worden per component opgeslagen:
 
 ```
-~/.zeroclaw/workspace/logs/
+~/.redclaw/workspace/logs/
 ├── daemon.log           # Daemon logs (startup, API verzoeken, fouten)
 ├── agent.log            # Agent logs (bericht routing, tool uitvoering)
 ├── telegram.log         # Kanaal-specifieke logs (indien ingeschakeld)
@@ -683,7 +683,7 @@ ZeroClaw logt naar `~/.zeroclaw/workspace/logs/` standaard. Logs worden per comp
 ```toml
 [logging]
 level = "info"                           # debug, info, warn, error
-path = "~/.zeroclaw/workspace/logs/"
+path = "~/.redclaw/workspace/logs/"
 rotation = "daily"                       # daily, hourly, size
 max_size_mb = 100                        # Voor grootte-gebaseerde rotatie
 retention_days = 30                      # Automatische opruiming na N dagen
@@ -693,15 +693,15 @@ Zie [Configuratie Referentie](docs/config-reference.md#logging) voor alle loggin
 
 ### Metrieken (Gepland)
 
-Prometheus metrieken ondersteuning voor productie monitoring komt binnenkort. Tracking in [#234](https://github.com/zeroclaw-labs/zeroclaw/issues/234).
+Prometheus metrieken ondersteuning voor productie monitoring komt binnenkort. Tracking in [#234](https://github.com/redclaw-labs/redclaw/issues/234).
 
 ## Vaardigheden
 
-ZeroClaw ondersteunt aangepaste vaardigheden — herbruikbare modules die systeemmogelijkheden uitbreiden.
+RedClaw ondersteunt aangepaste vaardigheden — herbruikbare modules die systeemmogelijkheden uitbreiden.
 
 ### Vaardigheidsdefinitie
 
-Vaardigheden worden opgeslagen in `~/.zeroclaw/workspace/skills/<skill-name>/` met deze structuur:
+Vaardigheden worden opgeslagen in `~/.redclaw/workspace/skills/<skill-name>/` met deze structuur:
 
 ```
 skills/
@@ -748,7 +748,7 @@ Zie [Vaardigheden](#vaardigheden) sectie voor volledige vaardigheidscreatie-inst
 
 ## Open Skills
 
-ZeroClaw ondersteunt [Open Skills](https://github.com/openagents-com/open-skills) — een modulair en provider-agnostisch systeem voor het uitbreiden van AI-agent mogelijkheden.
+RedClaw ondersteunt [Open Skills](https://github.com/openagents-com/open-skills) — een modulair en provider-agnostisch systeem voor het uitbreiden van AI-agent mogelijkheden.
 
 ### Open Skills Inschakelen
 
@@ -758,7 +758,7 @@ open_skills_enabled = true
 # open_skills_dir = "/path/to/open-skills"  # optioneel
 ```
 
-Je kunt ook tijdens runtime overschrijven met `ZEROCLAW_OPEN_SKILLS_ENABLED` en `ZEROCLAW_OPEN_SKILLS_DIR`.
+Je kunt ook tijdens runtime overschrijven met `REDCLAW_OPEN_SKILLS_ENABLED` en `REDCLAW_OPEN_SKILLS_DIR`.
 
 ## Ontwikkeling
 
@@ -792,7 +792,7 @@ cargo build --release --locked
 cargo install --path . --force --locked
 ```
 
-ZeroClaw is geconfigureerd om `rustls` te gebruiken voor HTTP/TLS afhankelijkheden; `--locked` houdt de transitieve grafiek deterministisch in schone omgevingen.
+RedClaw is geconfigureerd om `rustls` te gebruiken voor HTTP/TLS afhankelijkheden; `--locked` houdt de transitieve grafiek deterministisch in schone omgevingen.
 
 Om de hook over te slaan wanneer je een snelle push nodig hebt tijdens ontwikkeling:
 
@@ -833,9 +833,9 @@ Voor implementatie en runtime operaties:
 - Netwerk Implementatie Gids: [docs/network-deployment.md](docs/network-deployment.md)
 - Proxy Agent Playbook: [docs/proxy-agent-playbook.md](docs/proxy-agent-playbook.md)
 
-## ZeroClaw Ondersteunen
+## RedClaw Ondersteunen
 
-Als ZeroClaw je werk helpt en je de doorlopende ontwikkeling wilt ondersteunen, kun je hier doneren:
+Als RedClaw je werk helpt en je de doorlopende ontwikkeling wilt ondersteunen, kun je hier doneren:
 
 <a href="https://buymeacoffee.com/argenistherose"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow.svg?style=for-the-badge&logo=buy-me-a-coffee" alt="Koop Een Koffie Voor Mij" /></a>
 
@@ -852,19 +852,19 @@ We bouwen in open source omdat de beste ideeën van overal komen. Als je dit lee
 
 ## ⚠️ Officiële Repository en Waarschuwing voor Imitatie
 
-**Dit is de enige officiële ZeroClaw repository:**
+**Dit is de enige officiële RedClaw repository:**
 
-> <https://github.com/zeroclaw-labs/zeroclaw>
+> <https://github.com/redclaw-labs/redclaw>
 
-Elke andere repository, organisatie, domein of pakket dat beweert "ZeroClaw" te zijn of affiniteit met ZeroClaw Labs suggereert is **niet-geautoriseerd en niet gelieerd aan dit project**. Bekende niet-geautoriseerde forks worden vermeld in [TRADEMARK.md](TRADEMARK.md).
+Elke andere repository, organisatie, domein of pakket dat beweert "RedClaw" te zijn of affiniteit met RedClaw Labs suggereert is **niet-geautoriseerd en niet gelieerd aan dit project**. Bekende niet-geautoriseerde forks worden vermeld in [TRADEMARK.md](TRADEMARK.md).
 
-Als je imitatie of handelsmerk misbruik tegenkomt, [open dan een issue](https://github.com/zeroclaw-labs/zeroclaw/issues).
+Als je imitatie of handelsmerk misbruik tegenkomt, [open dan een issue](https://github.com/redclaw-labs/redclaw/issues).
 
 ---
 
 ## Licentie
 
-ZeroClaw is dubbel gelicentieerd voor maximale openheid en bijdrager bescherming:
+RedClaw is dubbel gelicentieerd voor maximale openheid en bijdrager bescherming:
 
 | Licentie                      | Gebruiksscenario's                                            |
 | ---------------------------- | ------------------------------------------------------------ |
@@ -875,7 +875,7 @@ Je kunt een van beide licenties kiezen. **Bijdragers verlenen automatisch rechte
 
 ### Handelsmerk
 
-De naam **ZeroClaw** en het logo zijn geregistreerde handelsmerken van ZeroClaw Labs. Deze licentie verleent geen toestemming om ze te gebruiken om goedkeuring of affiniteit te impliceren. Zie [TRADEMARK.md](TRADEMARK.md) voor toegestane en verboden gebruiksmogelijkheden.
+De naam **RedClaw** en het logo zijn geregistreerde handelsmerken van RedClaw Labs. Deze licentie verleent geen toestemming om ze te gebruiken om goedkeuring of affiniteit te impliceren. Zie [TRADEMARK.md](TRADEMARK.md) voor toegestane en verboden gebruiksmogelijkheden.
 
 ### Bijdrager Beschermingen
 
@@ -895,20 +895,20 @@ Zie [CONTRIBUTING.md](CONTRIBUTING.md) en [CLA.md](CLA.md). Implementeer een tra
 - Nieuwe `Tool` → `src/tools/`
 - Nieuwe `Memory` → `src/memory/`
 - Nieuwe `Tunnel` → `src/tunnel/`
-- Nieuwe `Skill` → `~/.zeroclaw/workspace/skills/<n>/`
+- Nieuwe `Skill` → `~/.redclaw/workspace/skills/<n>/`
 
 ---
 
-**ZeroClaw** — Nul overhead. Nul compromis. Implementeer overal. Wissel alles. 🦀
+**RedClaw** — Nul overhead. Nul compromis. Implementeer overal. Wissel alles. 🦀
 
 ## Sterren Geschiedenis
 
 <p align="center">
-  <a href="https://www.star-history.com/#zeroclaw-labs/zeroclaw&type=date&legend=top-left">
+  <a href="https://www.star-history.com/#redclaw-labs/redclaw&type=date&legend=top-left">
     <picture>
-     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=zeroclaw-labs/zeroclaw&type=date&theme=dark&legend=top-left" />
-     <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=zeroclaw-labs/zeroclaw&type=date&legend=top-left" />
-     <img alt="Sterren Geschiedenis Grafiek" src="https://api.star-history.com/svg?repos=zeroclaw-labs/zeroclaw&type=date&legend=top-left" />
+     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=redclaw-labs/redclaw&type=date&theme=dark&legend=top-left" />
+     <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=redclaw-labs/redclaw&type=date&legend=top-left" />
+     <img alt="Sterren Geschiedenis Grafiek" src="https://api.star-history.com/svg?repos=redclaw-labs/redclaw&type=date&legend=top-left" />
     </picture>
   </a>
 </p>

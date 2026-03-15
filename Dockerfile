@@ -14,53 +14,53 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # 1. Copy manifests to cache dependencies
 COPY Cargo.toml Cargo.lock ./
-COPY crates/robot-kit/Cargo.toml crates/robot-kit/Cargo.toml
+COPY modules/robot-kit/Cargo.toml modules/robot-kit/Cargo.toml
 # Create dummy targets declared in Cargo.toml so manifest parsing succeeds.
-RUN mkdir -p src benches crates/robot-kit/src \
+RUN mkdir -p src benches modules/robot-kit/src \
     && echo "fn main() {}" > src/main.rs \
     && echo "fn main() {}" > benches/agent_benchmarks.rs \
-    && echo "pub fn placeholder() {}" > crates/robot-kit/src/lib.rs
-RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
-    --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
-    --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
+    && echo "pub fn placeholder() {}" > modules/robot-kit/src/lib.rs
+RUN --mount=type=cache,id=redclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=redclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,id=redclaw-target,target=/app/target,sharing=locked \
     cargo build --release --locked
-RUN rm -rf src benches crates/robot-kit/src
+RUN rm -rf src benches modules/robot-kit/src
 
 # 2. Copy only build-relevant source paths (avoid cache-busting on docs/tests/scripts)
 COPY src/ src/
 COPY benches/ benches/
-COPY crates/ crates/
+COPY modules/ modules/
 COPY firmware/ firmware/
-COPY web/ web/
+COPY apps/web/ apps/web/
 # Keep release builds resilient when frontend dist assets are not prebuilt in Git.
-RUN mkdir -p web/dist && \
-    if [ ! -f web/dist/index.html ]; then \
+RUN mkdir -p apps/web/dist && \
+    if [ ! -f apps/web/dist/index.html ]; then \
       printf '%s\n' \
         '<!doctype html>' \
         '<html lang="en">' \
         '  <head>' \
         '    <meta charset="utf-8" />' \
         '    <meta name="viewport" content="width=device-width,initial-scale=1" />' \
-        '    <title>ZeroClaw Dashboard</title>' \
+        '    <title>RedClaw Dashboard</title>' \
         '  </head>' \
         '  <body>' \
-        '    <h1>ZeroClaw Dashboard Unavailable</h1>' \
-        '    <p>Frontend assets are not bundled in this build. Build the web UI to populate <code>web/dist</code>.</p>' \
+        '    <h1>RedClaw Dashboard Unavailable</h1>' \
+        '    <p>Frontend assets are not bundled in this build. Build the web UI to populate <code>apps/web/dist</code>.</p>' \
         '  </body>' \
-        '</html>' > web/dist/index.html; \
+        '</html>' > apps/web/dist/index.html; \
     fi
-RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
-    --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
-    --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
+RUN --mount=type=cache,id=redclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=redclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,id=redclaw-target,target=/app/target,sharing=locked \
     cargo build --release --locked && \
-    cp target/release/zeroclaw /app/zeroclaw && \
-    strip /app/zeroclaw
+    cp target/release/redclaw /app/redclaw && \
+    strip /app/redclaw
 
 # Prepare runtime directory structure and default config inline (no extra stage)
-RUN mkdir -p /zeroclaw-data/.zeroclaw /zeroclaw-data/workspace && \
+RUN mkdir -p /redclaw-data/.redclaw /redclaw-data/workspace && \
     printf '%s\n' \
-        'workspace_dir = "/zeroclaw-data/workspace"' \
-        'config_path = "/zeroclaw-data/.zeroclaw/config.toml"' \
+        'workspace_dir = "/redclaw-data/workspace"' \
+        'config_path = "/redclaw-data/.redclaw/config.toml"' \
         'api_key = ""' \
         'default_provider = "openrouter"' \
         'default_model = "anthropic/claude-sonnet-4-20250514"' \
@@ -70,8 +70,8 @@ RUN mkdir -p /zeroclaw-data/.zeroclaw /zeroclaw-data/workspace && \
         'port = 42617' \
         'host = "[::]"' \
         'allow_public_bind = true' \
-        > /zeroclaw-data/.zeroclaw/config.toml && \
-    chown -R 65534:65534 /zeroclaw-data
+        > /redclaw-data/.redclaw/config.toml && \
+    chown -R 65534:65534 /redclaw-data
 
 # ── Stage 2: Development Runtime (Debian) ────────────────────
 FROM debian:trixie-slim@sha256:f6e2cfac5cf956ea044b4bd75e6397b4372ad88fe00908045e9a0d21712ae3ba AS dev
@@ -82,53 +82,55 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /zeroclaw-data /zeroclaw-data
-COPY --from=builder /app/zeroclaw /usr/local/bin/zeroclaw
+COPY --from=builder /redclaw-data /redclaw-data
+COPY --from=builder /app/redclaw /usr/local/bin/redclaw
 
 # Overwrite minimal config with DEV template (Ollama defaults)
-COPY dev/config.template.toml /zeroclaw-data/.zeroclaw/config.toml
-RUN chown 65534:65534 /zeroclaw-data/.zeroclaw/config.toml
+COPY dev/config.template.toml /redclaw-data/.redclaw/config.toml
+RUN chown 65534:65534 /redclaw-data/.redclaw/config.toml
 
 # Environment setup
 # Ensure UTF-8 locale so CJK / multibyte input is handled correctly
 ENV LANG=C.UTF-8
 # Use consistent workspace path
-ENV ZEROCLAW_WORKSPACE=/zeroclaw-data/workspace
-ENV HOME=/zeroclaw-data
+ENV REDCLAW_CONFIG_DIR=/redclaw-data/.redclaw
+ENV REDCLAW_WORKSPACE=/redclaw-data/workspace
+ENV HOME=/redclaw-data
 # Defaults for local dev (Ollama) - matches config.template.toml
 ENV PROVIDER="ollama"
-ENV ZEROCLAW_MODEL="llama3.2"
-ENV ZEROCLAW_GATEWAY_PORT=42617
+ENV REDCLAW_MODEL="llama3.2"
+ENV REDCLAW_GATEWAY_PORT=42617
 
 # Note: API_KEY is intentionally NOT set here to avoid confusion.
 # It is set in config.toml as the Ollama URL.
 
-WORKDIR /zeroclaw-data
+WORKDIR /redclaw-data
 USER 65534:65534
 EXPOSE 42617
-ENTRYPOINT ["zeroclaw"]
+ENTRYPOINT ["redclaw"]
 CMD ["gateway"]
 
 # ── Stage 3: Production Runtime (Distroless) ─────────────────
 FROM gcr.io/distroless/cc-debian13:nonroot@sha256:84fcd3c223b144b0cb6edc5ecc75641819842a9679a3a58fd6294bec47532bf7 AS release
 
-COPY --from=builder /app/zeroclaw /usr/local/bin/zeroclaw
-COPY --from=builder /zeroclaw-data /zeroclaw-data
+COPY --from=builder /app/redclaw /usr/local/bin/redclaw
+COPY --from=builder /redclaw-data /redclaw-data
 
 # Environment setup
 # Ensure UTF-8 locale so CJK / multibyte input is handled correctly
 ENV LANG=C.UTF-8
-ENV ZEROCLAW_WORKSPACE=/zeroclaw-data/workspace
-ENV HOME=/zeroclaw-data
+ENV REDCLAW_CONFIG_DIR=/redclaw-data/.redclaw
+ENV REDCLAW_WORKSPACE=/redclaw-data/workspace
+ENV HOME=/redclaw-data
 # Default provider and model are set in config.toml, not here,
 # so config file edits are not silently overridden
 #ENV PROVIDER=
-ENV ZEROCLAW_GATEWAY_PORT=42617
+ENV REDCLAW_GATEWAY_PORT=42617
 
 # API_KEY must be provided at runtime!
 
-WORKDIR /zeroclaw-data
+WORKDIR /redclaw-data
 USER 65534:65534
 EXPOSE 42617
-ENTRYPOINT ["zeroclaw"]
+ENTRYPOINT ["redclaw"]
 CMD ["gateway"]

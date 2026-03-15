@@ -1,0 +1,10 @@
+{
+  "id": "runtime-native",
+  "name": "Native Runtime",
+  "version": "0.1.0",
+  "kind": "runtime",
+  "execution_mode": "in-process",
+  "description": "Native in-process runtime",
+  "dependencies": [],
+  "trust_tier": "official"
+}

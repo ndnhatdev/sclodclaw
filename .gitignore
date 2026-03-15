@@ -1,6 +1,10 @@
 /target
+/target_t0013
 firmware/*/target
 web/dist/
+/apps/web/dist/*
+!/apps/web/dist/.gitkeep
+/%SystemDrive%/
 *.db
 *.db-journal
 .DS_Store
@@ -30,7 +34,7 @@ venv/
 *.pem
 credentials.json
 .worktrees/
-.zeroclaw/*
+.redclaw/*
 
 # Skill eval workspaces (test outputs, transcripts, grading)
 .claude/skills/*-workspace/
@@ -38,6 +42,13 @@ credentials.json
 # Local state backups
 .local-state-backups/
 *.local-state-backup/
+
+# Local refactor/rebrand scratch artifacts
+dev/backups/
+dev/rebrand_dry_run.log
+dev/rebrand_execute.log
+dev/rebrand_report.json
+dev/rebrand_report.md
 
 # Coverage artifacts
 lcov.info

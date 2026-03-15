@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# ZeroClaw installer
+# Redhorse installer
 # POSIX preamble: ensure bash is available, then re-exec under bash.
 set -eu
 
@@ -25,7 +25,7 @@ _ensure_bash() {
   elif _have_cmd dnf; then _run_privileged dnf install -y bash
   elif _have_cmd pacman; then
     if _is_container_runtime; then
-      _PACMAN_CFG="$(mktemp /tmp/zeroclaw-pacman.XXXXXX.conf)"
+_PACMAN_CFG="$(mktemp /tmp/redclaw-pacman.XXXXXX.conf)"
       cp /etc/pacman.conf "$_PACMAN_CFG"
       grep -Eq '^[[:space:]]*DisableSandboxSyscalls([[:space:]]|$)' "$_PACMAN_CFG" || printf '\nDisableSandboxSyscalls\n' >> "$_PACMAN_CFG"
       _run_privileged pacman --config "$_PACMAN_CFG" -Sy --noconfirm
@@ -61,13 +61,13 @@ error() {
 
 usage() {
   cat <<'USAGE'
-ZeroClaw installer
+RedClaw installer
 
 Usage:
   ./install.sh [options]
 
 Modes:
-  Default mode installs/builds ZeroClaw only (requires existing Rust toolchain).
+  Default mode installs/builds RedClaw only (requires existing Rust toolchain).
   Guided mode asks setup questions and configures options interactively.
   Optional bootstrap mode can also install system dependencies and Rust.
 
@@ -101,18 +101,18 @@ Examples:
   ./install.sh --docker
 
   # Remote one-liner
-  curl -fsSL https://raw.githubusercontent.com/zeroclaw-labs/zeroclaw/master/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/main/install.sh | bash
 
 Environment:
-  ZEROCLAW_CONTAINER_CLI     Container CLI command (default: docker; auto-fallback: podman)
-  ZEROCLAW_DOCKER_DATA_DIR   Host path for Docker config/workspace persistence
-  ZEROCLAW_DOCKER_IMAGE      Docker image tag to build/run (default: zeroclaw-bootstrap:local)
-  ZEROCLAW_API_KEY           Used when --api-key is not provided
-  ZEROCLAW_PROVIDER          Used when --provider is not provided (default: openrouter)
-  ZEROCLAW_MODEL             Used when --model is not provided
-  ZEROCLAW_BOOTSTRAP_MIN_RAM_MB   Minimum RAM threshold for source build preflight (default: 2048)
-  ZEROCLAW_BOOTSTRAP_MIN_DISK_MB  Minimum free disk threshold for source build preflight (default: 6144)
-  ZEROCLAW_DISABLE_ALPINE_AUTO_DEPS
+  REDCLAW_CONTAINER_CLI     Container CLI command (default: docker; auto-fallback: podman)
+  REDCLAW_DOCKER_DATA_DIR   Host path for Docker config/workspace persistence
+  REDCLAW_DOCKER_IMAGE      Docker image tag to build/run (default: redclaw-bootstrap:local)
+  REDCLAW_API_KEY           Used when --api-key is not provided
+  REDCLAW_PROVIDER          Used when --provider is not provided (default: openrouter)
+  REDCLAW_MODEL             Used when --model is not provided
+  REDCLAW_BOOTSTRAP_MIN_RAM_MB   Minimum RAM threshold for source build preflight (default: 2048)
+  REDCLAW_BOOTSTRAP_MIN_DISK_MB  Minimum free disk threshold for source build preflight (default: 6144)
+  REDCLAW_DISABLE_ALPINE_AUTO_DEPS
                             Set to 1 to disable Alpine auto-install of missing prerequisites
 USAGE
 }
@@ -180,8 +180,8 @@ should_attempt_prebuilt_for_resources() {
   local workspace="${1:-.}"
   local min_ram_mb min_disk_mb total_ram_mb free_disk_mb low_resource
 
-  min_ram_mb="${ZEROCLAW_BOOTSTRAP_MIN_RAM_MB:-2048}"
-  min_disk_mb="${ZEROCLAW_BOOTSTRAP_MIN_DISK_MB:-6144}"
+  min_ram_mb="${REDCLAW_BOOTSTRAP_MIN_RAM_MB:-2048}"
+  min_disk_mb="${REDCLAW_BOOTSTRAP_MIN_DISK_MB:-6144}"
   total_ram_mb="$(get_total_memory_mb || true)"
   free_disk_mb="$(get_available_disk_mb "$workspace" || true)"
   low_resource=false
@@ -229,9 +229,9 @@ install_prebuilt_binary() {
     return 1
   fi
 
-  archive_url="https://github.com/zeroclaw-labs/zeroclaw/releases/latest/download/zeroclaw-${target}.tar.gz"
-  temp_dir="$(mktemp -d -t zeroclaw-prebuilt-XXXXXX)"
-  archive_path="$temp_dir/zeroclaw-${target}.tar.gz"
+  archive_url="https://github.com/ndnhatdev/sclodclaw/releases/latest/download/redclaw-${target}.tar.gz"
+  temp_dir="$(mktemp -d -t redclaw-prebuilt-XXXXXX)"
+  archive_path="$temp_dir/redclaw-${target}.tar.gz"
 
   info "Attempting pre-built binary install for target: $target"
   if ! curl -fsSL "$archive_url" -o "$archive_path"; then
@@ -246,22 +246,22 @@ install_prebuilt_binary() {
     return 1
   fi
 
-  extracted_bin="$temp_dir/zeroclaw"
+  extracted_bin="$temp_dir/redclaw"
   if [[ ! -x "$extracted_bin" ]]; then
-    extracted_bin="$(find "$temp_dir" -maxdepth 2 -type f -name zeroclaw -perm -u+x | head -n 1 || true)"
+    extracted_bin="$(find "$temp_dir" -maxdepth 2 -type f -name redclaw -perm -u+x | head -n 1 || true)"
   fi
   if [[ -z "$extracted_bin" || ! -x "$extracted_bin" ]]; then
-    warn "Archive did not contain an executable zeroclaw binary."
+    warn "Archive did not contain an executable redclaw binary."
     rm -rf "$temp_dir"
     return 1
   fi
 
   install_dir="$HOME/.cargo/bin"
   mkdir -p "$install_dir"
-  install -m 0755 "$extracted_bin" "$install_dir/zeroclaw"
+  install -m 0755 "$extracted_bin" "$install_dir/redclaw"
   rm -rf "$temp_dir"
 
-  info "Installed pre-built binary to $install_dir/zeroclaw"
+  info "Installed pre-built binary to $install_dir/redclaw"
   if [[ ":$PATH:" != *":$install_dir:"* ]]; then
     warn "$install_dir is not in PATH for this shell."
     warn "Run: export PATH=\"$install_dir:\$PATH\""
@@ -306,7 +306,7 @@ run_pacman() {
 
   local pacman_cfg_tmp=""
   local pacman_rc=0
-  pacman_cfg_tmp="$(mktemp /tmp/zeroclaw-pacman.XXXXXX.conf)"
+  pacman_cfg_tmp="$(mktemp /tmp/redclaw-pacman.XXXXXX.conf)"
   cp /etc/pacman.conf "$pacman_cfg_tmp"
   if ! grep -Eq '^[[:space:]]*DisableSandboxSyscalls([[:space:]]|$)' "$pacman_cfg_tmp"; then
     printf '\nDisableSandboxSyscalls\n' >> "$pacman_cfg_tmp"
@@ -527,7 +527,7 @@ run_guided_installer() {
   fi
 
   echo
-  echo "ZeroClaw guided installer"
+  echo "Redhorse guided installer"
   echo "Answer a few questions, then the installer will run automatically."
   echo
 
@@ -555,7 +555,7 @@ run_guided_installer() {
     SKIP_BUILD=true
   fi
 
-  if prompt_yes_no "Install zeroclaw into cargo bin now?" "yes"; then
+  if prompt_yes_no "Install redclaw into cargo bin now?" "yes"; then
     SKIP_INSTALL=false
   else
     SKIP_INSTALL=true
@@ -635,7 +635,7 @@ run_guided_installer() {
 
 resolve_container_cli() {
   local requested_cli
-  requested_cli="${ZEROCLAW_CONTAINER_CLI:-docker}"
+  requested_cli="${REDCLAW_CONTAINER_CLI:-docker}"
 
   if have_cmd "$requested_cli"; then
     CONTAINER_CLI="$requested_cli"
@@ -650,9 +650,9 @@ resolve_container_cli() {
 
   error "Container CLI '$requested_cli' is not installed."
   if [[ "$requested_cli" != "docker" ]]; then
-    error "Set ZEROCLAW_CONTAINER_CLI to an installed Docker-compatible CLI (e.g., docker or podman)."
+    error "Set REDCLAW_CONTAINER_CLI to an installed Docker-compatible CLI (e.g., docker or podman)."
   else
-    error "Install Docker, install podman, or set ZEROCLAW_CONTAINER_CLI to an available Docker-compatible CLI."
+    error "Install Docker, install podman, or set REDCLAW_CONTAINER_CLI to an available Docker-compatible CLI."
   fi
   exit 1
 }
@@ -671,17 +671,17 @@ run_docker_bootstrap() {
   local docker_image docker_data_dir default_data_dir fallback_image
   local config_mount workspace_mount
   local -a container_run_user_args container_run_namespace_args
-  docker_image="${ZEROCLAW_DOCKER_IMAGE:-zeroclaw-bootstrap:local}"
-  fallback_image="ghcr.io/zeroclaw-labs/zeroclaw:latest"
+  docker_image="${REDCLAW_DOCKER_IMAGE:-redclaw-bootstrap:local}"
+  fallback_image="ghcr.io/ndnhatdev/sclodclaw:latest"
   if [[ "$TEMP_CLONE" == true ]]; then
-    default_data_dir="$HOME/.zeroclaw-docker"
+    default_data_dir="$HOME/.redclaw-docker"
   else
-    default_data_dir="$WORK_DIR/.zeroclaw-docker"
+    default_data_dir="$WORK_DIR/.redclaw-docker"
   fi
-  docker_data_dir="${ZEROCLAW_DOCKER_DATA_DIR:-$default_data_dir}"
+  docker_data_dir="${REDCLAW_DOCKER_DATA_DIR:-$default_data_dir}"
   DOCKER_DATA_DIR="$docker_data_dir"
 
-  mkdir -p "$docker_data_dir/.zeroclaw" "$docker_data_dir/workspace"
+  mkdir -p "$docker_data_dir/.redclaw" "$docker_data_dir/workspace"
 
   if [[ "$SKIP_INSTALL" == true ]]; then
     warn "--skip-install has no effect with --docker."
@@ -694,7 +694,7 @@ run_docker_bootstrap() {
     info "Skipping Docker image build"
     if ! "$CONTAINER_CLI" image inspect "$docker_image" >/dev/null 2>&1; then
       warn "Local Docker image ($docker_image) was not found."
-      info "Pulling official ZeroClaw image ($fallback_image)"
+      info "Pulling official Redhorse image ($fallback_image)"
       if ! "$CONTAINER_CLI" pull "$fallback_image"; then
         error "Failed to pull fallback Docker image: $fallback_image"
         error "Run without --skip-build to build locally, or verify access to GHCR."
@@ -707,8 +707,8 @@ run_docker_bootstrap() {
     fi
   fi
 
-  config_mount="$docker_data_dir/.zeroclaw:/zeroclaw-data/.zeroclaw"
-  workspace_mount="$docker_data_dir/workspace:/zeroclaw-data/workspace"
+  config_mount="$docker_data_dir/.redclaw:/redclaw-data/.redclaw"
+  workspace_mount="$docker_data_dir/workspace:/redclaw-data/workspace"
   if [[ "$CONTAINER_CLI" == "podman" ]]; then
     config_mount+=":Z"
     workspace_mount+=":Z"
@@ -733,7 +733,7 @@ run_docker_bootstrap() {
 Use either:
   --api-key "sk-..."
 or:
-  ZEROCLAW_API_KEY="sk-..." ./install.sh --docker
+  REDCLAW_API_KEY="sk-..." ./install.sh --docker
 or run interactive:
   ./install.sh --docker --interactive-onboard
 MSG
@@ -753,8 +753,9 @@ MSG
   "$CONTAINER_CLI" run --rm -it \
     "${container_run_namespace_args[@]+"${container_run_namespace_args[@]}"}" \
     "${container_run_user_args[@]}" \
-    -e HOME=/zeroclaw-data \
-    -e ZEROCLAW_WORKSPACE=/zeroclaw-data/workspace \
+    -e HOME=/redclaw-data \
+    -e REDCLAW_CONFIG_DIR=/redclaw-data/.redclaw \
+    -e REDCLAW_WORKSPACE=/redclaw-data/workspace \
     -v "$config_mount" \
     -v "$workspace_mount" \
     "$docker_image" \
@@ -764,7 +765,7 @@ MSG
 SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" >/dev/null 2>&1 && pwd || pwd)"
 ROOT_DIR="$SCRIPT_DIR"
-REPO_URL="https://github.com/zeroclaw-labs/zeroclaw.git"
+REPO_URL="https://github.com/ndnhatdev/sclodclaw.git"
 ORIGINAL_ARG_COUNT=$#
 GUIDED_MODE="auto"
 
@@ -779,10 +780,10 @@ INTERACTIVE_ONBOARD=false
 SKIP_BUILD=false
 SKIP_INSTALL=false
 PREBUILT_INSTALLED=false
-CONTAINER_CLI="${ZEROCLAW_CONTAINER_CLI:-docker}"
-API_KEY="${ZEROCLAW_API_KEY:-}"
-PROVIDER="${ZEROCLAW_PROVIDER:-openrouter}"
-MODEL="${ZEROCLAW_MODEL:-}"
+CONTAINER_CLI="${REDCLAW_CONTAINER_CLI:-docker}"
+API_KEY="${REDCLAW_API_KEY:-}"
+PROVIDER="${REDCLAW_PROVIDER:-openrouter}"
+MODEL="${REDCLAW_MODEL:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -902,11 +903,11 @@ if [[ "$DOCKER_MODE" == true ]]; then
       warn "--install-rust is ignored with --docker."
   fi
 else
-  if [[ "$OS_NAME" == "Linux" && -z "${ZEROCLAW_DISABLE_ALPINE_AUTO_DEPS:-}" ]] && have_cmd apk; then
+  if [[ "$OS_NAME" == "Linux" && -z "${REDCLAW_DISABLE_ALPINE_AUTO_DEPS:-}" ]] && have_cmd apk; then
     find_missing_alpine_prereqs
     if [[ ${#ALPINE_MISSING_PKGS[@]} -gt 0 && "$INSTALL_SYSTEM_DEPS" == false ]]; then
       info "Detected Alpine with missing prerequisites: ${ALPINE_MISSING_PKGS[*]}"
-      info "Auto-enabling system dependency installation (set ZEROCLAW_DISABLE_ALPINE_AUTO_DEPS=1 to disable)."
+      info "Auto-enabling system dependency installation (set REDCLAW_DISABLE_ALPINE_AUTO_DEPS=1 to disable)."
       INSTALL_SYSTEM_DEPS=true
     fi
   fi
@@ -931,13 +932,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Support three launch modes:
 # Support two launch modes:
 # 1) ./install.sh from repo root
 # 2) curl | bash (no local repo => temporary clone)
 if [[ ! -f "$WORK_DIR/Cargo.toml" ]]; then
-  if [[ -f "$(pwd)/Cargo.toml" ]]; then
+  if [[ -f "$(pwd)/Cargo.toml" && -f "$(pwd)/install.sh" ]]; then
     WORK_DIR="$(pwd)"
+  elif [[ -f "$(pwd)/Cargo.toml" ]]; then
+    warn "Current directory contains a Cargo.toml but is not a RedClaw checkout."
+    warn "Ignoring the current directory and cloning RedClaw to avoid installing the wrong project."
   else
     if ! have_cmd git; then
       error "git is required when running bootstrap outside a local repository checkout."
@@ -947,15 +950,18 @@ if [[ ! -f "$WORK_DIR/Cargo.toml" ]]; then
       exit 1
     fi
 
-    TEMP_DIR="$(mktemp -d -t zeroclaw-bootstrap-XXXXXX)"
-    info "No local repository detected; cloning latest master branch"
-    git clone --depth 1 --branch master "$REPO_URL" "$TEMP_DIR"
+  fi
+
+  if [[ -z "$WORK_DIR" || "$WORK_DIR" == "$ROOT_DIR" ]]; then
+    TEMP_DIR="$(mktemp -d -t redclaw-bootstrap-XXXXXX)"
+    info "No local RedClaw repository detected; cloning latest main branch"
+    git clone --depth 1 --branch main "$REPO_URL" "$TEMP_DIR"
     WORK_DIR="$TEMP_DIR"
     TEMP_CLONE=true
   fi
 fi
 
-info "ZeroClaw installer"
+  info "RedClaw installer"
 echo "    workspace: $WORK_DIR"
 
 cd "$WORK_DIR"
@@ -982,7 +988,7 @@ if [[ "$DOCKER_MODE" == true ]]; then
 
 ✅ Docker bootstrap complete.
 
-Your containerized ZeroClaw data is persisted under:
+Your containerized Redhorse data is persisted under:
 DONE
   echo "  $DOCKER_DATA_DIR"
   cat <<'DONE'
@@ -1035,31 +1041,31 @@ else
 fi
 
 if [[ "$SKIP_INSTALL" == false ]]; then
-  info "Installing zeroclaw to cargo bin"
+  info "Installing redclaw to cargo bin"
   cargo install --path "$WORK_DIR" --force --locked
 else
   info "Skipping install"
 fi
 
-ZEROCLAW_BIN=""
-if have_cmd zeroclaw; then
-  ZEROCLAW_BIN="zeroclaw"
-elif [[ -x "$HOME/.cargo/bin/zeroclaw" ]]; then
-  ZEROCLAW_BIN="$HOME/.cargo/bin/zeroclaw"
-elif [[ -x "$WORK_DIR/target/release/zeroclaw" ]]; then
-  ZEROCLAW_BIN="$WORK_DIR/target/release/zeroclaw"
+REDCLAW_BIN=""
+if have_cmd redclaw; then
+  REDCLAW_BIN="redclaw"
+elif [[ -x "$HOME/.cargo/bin/redclaw" ]]; then
+  REDCLAW_BIN="$HOME/.cargo/bin/redclaw"
+elif [[ -x "$WORK_DIR/target/release/redclaw" ]]; then
+  REDCLAW_BIN="$WORK_DIR/target/release/redclaw"
 fi
 
 if [[ "$RUN_ONBOARD" == true ]]; then
-  if [[ -z "$ZEROCLAW_BIN" ]]; then
-    error "onboarding requested but zeroclaw binary is not available."
-    error "Run without --skip-install, or ensure zeroclaw is in PATH."
+  if [[ -z "$REDCLAW_BIN" ]]; then
+    error "onboarding requested but redclaw binary is not available."
+    error "Run without --skip-install, or ensure redclaw is in PATH."
     exit 1
   fi
 
   if [[ "$INTERACTIVE_ONBOARD" == true ]]; then
     info "Running interactive onboarding"
-    "$ZEROCLAW_BIN" onboard --interactive
+    "$REDCLAW_BIN" onboard --interactive
   else
     if [[ -z "$API_KEY" ]]; then
       cat <<'MSG'
@@ -1067,7 +1073,7 @@ if [[ "$RUN_ONBOARD" == true ]]; then
 Use either:
   --api-key "sk-..."
 or:
-  ZEROCLAW_API_KEY="sk-..." ./install.sh --onboard
+  REDCLAW_API_KEY="sk-..." ./install.sh --onboard
 or run interactive:
   ./install.sh --interactive-onboard
 MSG
@@ -1078,7 +1084,7 @@ MSG
     else
       info "Running quick onboarding (provider: $PROVIDER)"
     fi
-    ONBOARD_CMD=("$ZEROCLAW_BIN" onboard --api-key "$API_KEY" --provider "$PROVIDER")
+    ONBOARD_CMD=("$REDCLAW_BIN" onboard --api-key "$API_KEY" --provider "$PROVIDER")
     if [[ -n "$MODEL" ]]; then
       ONBOARD_CMD+=(--model "$MODEL")
     fi
@@ -1091,7 +1097,7 @@ cat <<'DONE'
 ✅ Bootstrap complete.
 
 Next steps:
-  zeroclaw status
-  zeroclaw agent -m "Hello, ZeroClaw!"
-  zeroclaw gateway
+  redclaw status
+  redclaw agent -m "Hello, RedClaw!"
+  redclaw gateway
 DONE

@@ -1,6 +1,6 @@
 # Telegram Integration Testing Guide
 
-This guide covers testing the Telegram channel integration for ZeroClaw.
+This guide covers testing the Telegram channel integration for RedClaw.
 
 ## 🚀 Quick Start
 
@@ -8,10 +8,10 @@ This guide covers testing the Telegram channel integration for ZeroClaw.
 
 ```bash
 # Full test suite (20+ tests, ~2 minutes)
-./tests/telegram/test_telegram_integration.sh
+./tests/manual/telegram/test_telegram_integration.sh
 
 # Quick smoke test (~10 seconds)
-./tests/telegram/quick_test.sh
+./tests/manual/telegram/quick_test.sh
 
 # Just unit tests
 cargo test telegram --lib
@@ -65,7 +65,7 @@ After running automated tests, perform these manual checks:
 1. **Basic messaging**
 
     ```bash
-    zeroclaw channel start
+    redclaw channel start
     ```
 
     - Send "Hello bot!" in Telegram
@@ -86,7 +86,7 @@ After running automated tests, perform these manual checks:
 3. **Unauthorized user blocking**
 
     ```toml
-    # Edit ~/.zeroclaw/config.toml
+    # Edit ~/.redclaw/config.toml
     allowed_users = ["999999999"]
     ```
 
@@ -104,7 +104,7 @@ After running automated tests, perform these manual checks:
 5. **Mention-only mode (group chats)**
 
     ```toml
-    # Edit ~/.zeroclaw/config.toml
+    # Edit ~/.redclaw/config.toml
     [channels.telegram]
     mention_only = true
     ```
@@ -119,7 +119,7 @@ After running automated tests, perform these manual checks:
 6. **Error logging**
 
     ```bash
-    RUST_LOG=debug zeroclaw channel start
+    RUST_LOG=debug redclaw channel start
     ```
 
     - Check for unexpected errors
@@ -128,7 +128,7 @@ After running automated tests, perform these manual checks:
 6. **Health check timeout**
 
     ```bash
-    time zeroclaw channel doctor
+    time redclaw channel doctor
     ```
 
     - Verify: Completes in <5 seconds
@@ -159,7 +159,7 @@ Solution: Check user allowlist
   1. Send message to bot
   2. Check logs for user_id
   3. Update config: allowed_users = ["YOUR_ID"]
-  4. Run: zeroclaw onboard --channels-only
+  4. Run: redclaw onboard --channels-only
 ```
 
 **Issue: Message splitting not working**
@@ -176,19 +176,19 @@ Solution: Verify code changes
 
 ```bash
 # 1. Run automated tests
-./tests/telegram/test_telegram_integration.sh
+./tests/manual/telegram/test_telegram_integration.sh
 
 # 2. Configure Telegram
-zeroclaw onboard --interactive
+redclaw onboard --interactive
 # Select Telegram channel
 # Enter bot token (from @BotFather)
 # Enter your user ID
 
 # 3. Verify health
-zeroclaw channel doctor
+redclaw channel doctor
 
 # 4. Start channel
-zeroclaw channel start
+redclaw channel start
 
 # 5. Send test message in Telegram
 ```
@@ -197,13 +197,13 @@ zeroclaw channel start
 
 ```bash
 # 1. Quick validation
-./tests/telegram/quick_test.sh
+./tests/manual/telegram/quick_test.sh
 
 # 2. Full test suite
-./tests/telegram/test_telegram_integration.sh
+./tests/manual/telegram/test_telegram_integration.sh
 
 # 3. Manual smoke test
-zeroclaw channel start
+redclaw channel start
 # Send message in Telegram
 ```
 
@@ -211,7 +211,7 @@ zeroclaw channel start
 
 ```bash
 # 1. Full test suite
-./tests/telegram/test_telegram_integration.sh
+./tests/manual/telegram/test_telegram_integration.sh
 
 # 2. Load test (optional)
 # Send 100 messages rapidly
@@ -223,10 +223,10 @@ for i in {1..100}; do
 done
 
 # 3. Monitor logs
-RUST_LOG=info zeroclaw daemon
+RUST_LOG=info redclaw daemon
 
 # 4. Check metrics
-zeroclaw status
+redclaw status
 ```
 
 ## 📊 Performance Benchmarks
@@ -235,11 +235,11 @@ Expected values after all fixes:
 
 | Metric                 | Expected   | How to Measure                   |
 | ---------------------- | ---------- | -------------------------------- |
-| Health check time      | <5s        | `time zeroclaw channel doctor`   |
+| Health check time      | <5s        | `time redclaw channel doctor`   |
 | First response time    | <3s        | Time from sending to receiving   |
 | Message split overhead | <50ms      | Check logs for timing            |
-| Memory usage           | <10MB      | `ps aux \| grep zeroclaw`        |
-| Binary size            | ~3-4MB     | `ls -lh target/release/zeroclaw` |
+| Memory usage           | <10MB      | `ps aux \| grep redclaw`        |
+| Binary size            | ~3-4MB     | `ls -lh target/release/redclaw` |
 | Unit test coverage     | 61/61 pass | `cargo test telegram --lib`      |
 
 ## 🐛 Debugging Failed Tests
@@ -261,14 +261,14 @@ cargo test telegram --lib -- --ignored
 
 ```bash
 # Maximum logging
-RUST_LOG=trace zeroclaw channel start
+RUST_LOG=trace redclaw channel start
 
 # Check Telegram API directly
 curl "https://api.telegram.org/bot<TOKEN>/getMe"
 curl "https://api.telegram.org/bot<TOKEN>/getUpdates"
 
 # Validate config
-cat ~/.zeroclaw/config.toml | grep -A 3 "\[channels_config.telegram\]"
+cat ~/.redclaw/config.toml | grep -A 3 "\[channels_config.telegram\]"
 ```
 
 ### Debug Build Issues
@@ -315,8 +315,8 @@ jobs:
 
 Before merging code:
 
-- [ ] `./tests/telegram/quick_test.sh` passes
-- [ ] `./tests/telegram/test_telegram_integration.sh` passes
+- [ ] `./tests/manual/telegram/quick_test.sh` passes
+- [ ] `./tests/manual/telegram/test_telegram_integration.sh` passes
 - [ ] Manual tests completed
 - [ ] No new clippy warnings
 - [ ] Code is formatted (`cargo fmt`)
@@ -338,15 +338,15 @@ git revert <commit-hash>
 cargo build --release
 
 # 4. Restart service
-zeroclaw service restart
+redclaw service restart
 
 # 5. Verify
-zeroclaw channel doctor
+redclaw channel doctor
 ```
 
 ## 📚 Additional Resources
 
 - [Telegram Bot API Documentation](https://core.telegram.org/bots/api)
-- [ZeroClaw Main README](../../README.md)
+- [RedClaw Main README](../../README.md)
 - [Contributing Guide](../../CONTRIBUTING.md)
-- [Issue Tracker](https://github.com/zeroclaw-labs/zeroclaw/issues)
+- [Issue Tracker](https://github.com/redclaw-labs/redclaw/issues)

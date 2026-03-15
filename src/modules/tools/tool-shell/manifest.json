@@ -1,0 +1,41 @@
+{
+  "id": "tool-shell",
+  "name": "Tool Shell",
+  "version": "0.1.0",
+  "kind": "tool",
+  "engine": {
+    "redhorse": ">=0.1.0 <0.2.0"
+  },
+  "artifact": {
+    "kind": "bundled",
+    "entry": "modules/tools/tool-shell"
+  },
+  "execution": {
+    "mode": "process"
+  },
+  "trust": {
+    "required": "official"
+  },
+  "capabilities": {
+    "requested": [],
+    "parameterized": []
+  },
+  "dependencies": [
+    {
+      "id": "runtime-native"
+    }
+  ],
+  "config": {
+    "schema": {},
+    "defaultFragment": {}
+  },
+  "activation": {
+    "events": [
+      "tool.activate"
+    ],
+    "safeModeEligible": false
+  },
+  "install": {
+    "source": "bundled"
+  }
+}

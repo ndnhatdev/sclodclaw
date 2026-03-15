@@ -1,6 +1,6 @@
-# ZeroClaw Commands Reference
+# RedClaw Commands Reference
 
-This reference is derived from the current CLI surface (`zeroclaw --help`).
+This reference is derived from the current CLI surface (`redclaw --help`).
 
 Last verified: **February 21, 2026**.
 
@@ -32,14 +32,14 @@ Last verified: **February 21, 2026**.
 
 ### `onboard`
 
-- `zeroclaw onboard`
-- `zeroclaw onboard --interactive`
-- `zeroclaw onboard --channels-only`
-- `zeroclaw onboard --force`
-- `zeroclaw onboard --api-key <KEY> --provider <ID> --memory <sqlite|lucid|markdown|none>`
-- `zeroclaw onboard --api-key <KEY> --provider <ID> --model <MODEL_ID> --memory <sqlite|lucid|markdown|none>`
-- `zeroclaw onboard --api-key <KEY> --provider <ID> --model <MODEL_ID> --memory <sqlite|lucid|markdown|none> --force`
-- `zeroclaw onboard --reinit --interactive`
+- `redclaw onboard`
+- `redclaw onboard --interactive`
+- `redclaw onboard --channels-only`
+- `redclaw onboard --force`
+- `redclaw onboard --api-key <KEY> --provider <ID> --memory <sqlite|lucid|markdown|none>`
+- `redclaw onboard --api-key <KEY> --provider <ID> --model <MODEL_ID> --memory <sqlite|lucid|markdown|none>`
+- `redclaw onboard --api-key <KEY> --provider <ID> --model <MODEL_ID> --memory <sqlite|lucid|markdown|none> --force`
+- `redclaw onboard --reinit --interactive`
 
 `onboard` safety behavior:
 
@@ -47,15 +47,15 @@ Last verified: **February 21, 2026**.
   - Full onboarding (overwrite `config.toml`)
   - Provider-only update (update provider/model/API key while preserving existing channels, tunnel, memory, hooks, and other settings)
 - In non-interactive environments, existing `config.toml` causes a safe refusal unless `--force` is passed.
-- Use `zeroclaw onboard --channels-only` when you only need to rotate channel tokens/allowlists.
-- Use `zeroclaw onboard --reinit --interactive` to start fresh. This backs up your existing config directory with a timestamp suffix and creates a new configuration from scratch. Requires `--interactive`.
+- Use `redclaw onboard --channels-only` when you only need to rotate channel tokens/allowlists.
+- Use `redclaw onboard --reinit --interactive` to start fresh. This backs up your existing config directory with a timestamp suffix and creates a new configuration from scratch. Requires `--interactive`.
 
 ### `agent`
 
-- `zeroclaw agent`
-- `zeroclaw agent -m "Hello"`
-- `zeroclaw agent --provider <ID> --model <MODEL> --temperature <0.0-2.0>`
-- `zeroclaw agent --peripheral <board:path>`
+- `redclaw agent`
+- `redclaw agent -m "Hello"`
+- `redclaw agent --provider <ID> --model <MODEL> --temperature <0.0-2.0>`
+- `redclaw agent --peripheral <board:path>`
 
 Tip:
 
@@ -63,21 +63,21 @@ Tip:
 
 ### `gateway` / `daemon`
 
-- `zeroclaw gateway [--host <HOST>] [--port <PORT>]`
-- `zeroclaw daemon [--host <HOST>] [--port <PORT>]`
+- `redclaw gateway [--host <HOST>] [--port <PORT>]`
+- `redclaw daemon [--host <HOST>] [--port <PORT>]`
 
 ### `estop`
 
-- `zeroclaw estop` (engage `kill-all`)
-- `zeroclaw estop --level network-kill`
-- `zeroclaw estop --level domain-block --domain "*.chase.com" [--domain "*.paypal.com"]`
-- `zeroclaw estop --level tool-freeze --tool shell [--tool browser]`
-- `zeroclaw estop status`
-- `zeroclaw estop resume`
-- `zeroclaw estop resume --network`
-- `zeroclaw estop resume --domain "*.chase.com"`
-- `zeroclaw estop resume --tool shell`
-- `zeroclaw estop resume --otp <123456>`
+- `redclaw estop` (engage `kill-all`)
+- `redclaw estop --level network-kill`
+- `redclaw estop --level domain-block --domain "*.chase.com" [--domain "*.paypal.com"]`
+- `redclaw estop --level tool-freeze --tool shell [--tool browser]`
+- `redclaw estop status`
+- `redclaw estop resume`
+- `redclaw estop resume --network`
+- `redclaw estop resume --domain "*.chase.com"`
+- `redclaw estop resume --tool shell`
+- `redclaw estop resume --otp <123456>`
 
 Notes:
 
@@ -87,23 +87,23 @@ Notes:
 
 ### `service`
 
-- `zeroclaw service install`
-- `zeroclaw service start`
-- `zeroclaw service stop`
-- `zeroclaw service restart`
-- `zeroclaw service status`
-- `zeroclaw service uninstall`
+- `redclaw service install`
+- `redclaw service start`
+- `redclaw service stop`
+- `redclaw service restart`
+- `redclaw service status`
+- `redclaw service uninstall`
 
 ### `cron`
 
-- `zeroclaw cron list`
-- `zeroclaw cron add <expr> [--tz <IANA_TZ>] <command>`
-- `zeroclaw cron add-at <rfc3339_timestamp> <command>`
-- `zeroclaw cron add-every <every_ms> <command>`
-- `zeroclaw cron once <delay> <command>`
-- `zeroclaw cron remove <id>`
-- `zeroclaw cron pause <id>`
-- `zeroclaw cron resume <id>`
+- `redclaw cron list`
+- `redclaw cron add <expr> [--tz <IANA_TZ>] <command>`
+- `redclaw cron add-at <rfc3339_timestamp> <command>`
+- `redclaw cron add-every <every_ms> <command>`
+- `redclaw cron once <delay> <command>`
+- `redclaw cron remove <id>`
+- `redclaw cron pause <id>`
+- `redclaw cron resume <id>`
 
 Notes:
 
@@ -112,29 +112,29 @@ Notes:
 
 ### `models`
 
-- `zeroclaw models refresh`
-- `zeroclaw models refresh --provider <ID>`
-- `zeroclaw models refresh --force`
+- `redclaw models refresh`
+- `redclaw models refresh --provider <ID>`
+- `redclaw models refresh --force`
 
 `models refresh` currently supports live catalog refresh for provider IDs: `openrouter`, `openai`, `anthropic`, `groq`, `mistral`, `deepseek`, `xai`, `together-ai`, `gemini`, `ollama`, `llamacpp`, `sglang`, `vllm`, `astrai`, `venice`, `fireworks`, `cohere`, `moonshot`, `glm`, `zai`, `qwen`, and `nvidia`.
 
 ### `doctor`
 
-- `zeroclaw doctor`
-- `zeroclaw doctor models [--provider <ID>] [--use-cache]`
-- `zeroclaw doctor traces [--limit <N>] [--event <TYPE>] [--contains <TEXT>]`
-- `zeroclaw doctor traces --id <TRACE_ID>`
+- `redclaw doctor`
+- `redclaw doctor models [--provider <ID>] [--use-cache]`
+- `redclaw doctor traces [--limit <N>] [--event <TYPE>] [--contains <TEXT>]`
+- `redclaw doctor traces --id <TRACE_ID>`
 
 `doctor traces` reads runtime tool/model diagnostics from `observability.runtime_trace_path`.
 
 ### `channel`
 
-- `zeroclaw channel list`
-- `zeroclaw channel start`
-- `zeroclaw channel doctor`
-- `zeroclaw channel bind-telegram <IDENTITY>`
-- `zeroclaw channel add <type> <json>`
-- `zeroclaw channel remove <name>`
+- `redclaw channel list`
+- `redclaw channel start`
+- `redclaw channel doctor`
+- `redclaw channel bind-telegram <IDENTITY>`
+- `redclaw channel add <type> <json>`
+- `redclaw channel remove <name>`
 
 Runtime in-chat commands (Telegram/Discord while channel server is running):
 
@@ -155,14 +155,14 @@ Channel runtime also watches `config.toml` and hot-applies updates to:
 
 ### `integrations`
 
-- `zeroclaw integrations info <name>`
+- `redclaw integrations info <name>`
 
 ### `skills`
 
-- `zeroclaw skills list`
-- `zeroclaw skills audit <source_or_name>`
-- `zeroclaw skills install <source>`
-- `zeroclaw skills remove <name>`
+- `redclaw skills list`
+- `redclaw skills audit <source_or_name>`
+- `redclaw skills install <source>`
+- `redclaw skills remove <name>`
 
 `<source>` accepts git remotes (`https://...`, `http://...`, `ssh://...`, and `git@host:owner/repo.git`) or a local filesystem path.
 
@@ -178,43 +178,43 @@ Skill manifests (`SKILL.toml`) support `prompts` and `[[tools]]`; both are injec
 
 ### `migrate`
 
-- `zeroclaw migrate openclaw [--source <path>] [--dry-run]`
+- `redclaw migrate openclaw [--source <path>] [--dry-run]`
 
 ### `config`
 
-- `zeroclaw config schema`
+- `redclaw config schema`
 
 `config schema` prints a JSON Schema (draft 2020-12) for the full `config.toml` contract to stdout.
 
 ### `completions`
 
-- `zeroclaw completions bash`
-- `zeroclaw completions fish`
-- `zeroclaw completions zsh`
-- `zeroclaw completions powershell`
-- `zeroclaw completions elvish`
+- `redclaw completions bash`
+- `redclaw completions fish`
+- `redclaw completions zsh`
+- `redclaw completions powershell`
+- `redclaw completions elvish`
 
 `completions` is stdout-only by design so scripts can be sourced directly without log/warning contamination.
 
 ### `hardware`
 
-- `zeroclaw hardware discover`
-- `zeroclaw hardware introspect <path>`
-- `zeroclaw hardware info [--chip <chip_name>]`
+- `redclaw hardware discover`
+- `redclaw hardware introspect <path>`
+- `redclaw hardware info [--chip <chip_name>]`
 
 ### `peripheral`
 
-- `zeroclaw peripheral list`
-- `zeroclaw peripheral add <board> <path>`
-- `zeroclaw peripheral flash [--port <serial_port>]`
-- `zeroclaw peripheral setup-uno-q [--host <ip_or_host>]`
-- `zeroclaw peripheral flash-nucleo`
+- `redclaw peripheral list`
+- `redclaw peripheral add <board> <path>`
+- `redclaw peripheral flash [--port <serial_port>]`
+- `redclaw peripheral setup-uno-q [--host <ip_or_host>]`
+- `redclaw peripheral flash-nucleo`
 
 ## Validation Tip
 
 To verify docs against your current binary quickly:
 
 ```bash
-zeroclaw --help
-zeroclaw <command> --help
+redclaw --help
+redclaw <command> --help
 ```

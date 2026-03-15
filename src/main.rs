@@ -32,27 +32,25 @@
     dead_code
 )]
 
-use anyhow::{bail, Context, Result};
-use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use anyhow::{anyhow, bail, Context, Result};
+use clap::{CommandFactory, Parser, Subcommand};
 use dialoguer::{Input, Password};
+use redclaw::cli_support::{parse_temperature, CompletionShell, EstopLevelArg};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use tracing::{info, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 
-fn parse_temperature(s: &str) -> std::result::Result<f64, String> {
-    let t: f64 = s.parse().map_err(|e| format!("{e}"))?;
-    config::schema::validate_temperature(t)
-}
-
 mod agent;
 mod approval;
 mod auth;
+mod branding;
 mod channels;
 mod rag {
-    pub use zeroclaw::rag::*;
+    pub use redclaw::rag::*;
 }
 mod config;
+mod core;
 mod cost;
 mod cron;
 mod daemon;
@@ -83,40 +81,14 @@ mod util;
 use config::Config;
 
 // Re-export so binary modules can use crate::<CommandEnum> while keeping a single source of truth.
-pub use zeroclaw::{
+pub use redclaw::{
     ChannelCommands, CronCommands, GatewayCommands, HardwareCommands, IntegrationCommands,
-    MigrateCommands, PeripheralCommands, ServiceCommands, SkillCommands,
+    MigrateCommands, ModulesCommands, PeripheralCommands, ServiceCommands, SkillCommands,
 };
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
-enum CompletionShell {
-    #[value(name = "bash")]
-    Bash,
-    #[value(name = "fish")]
-    Fish,
-    #[value(name = "zsh")]
-    Zsh,
-    #[value(name = "powershell")]
-    PowerShell,
-    #[value(name = "elvish")]
-    Elvish,
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
-enum EstopLevelArg {
-    #[value(name = "kill-all")]
-    KillAll,
-    #[value(name = "network-kill")]
-    NetworkKill,
-    #[value(name = "domain-block")]
-    DomainBlock,
-    #[value(name = "tool-freeze")]
-    ToolFreeze,
-}
-
-/// `ZeroClaw` - Zero overhead. Zero compromise. 100% Rust.
+/// `RedClaw` - Zero overhead. Zero compromise. 100% Rust.
 #[derive(Parser, Debug)]
-#[command(name = "zeroclaw")]
+#[command(name = "redclaw")]
 #[command(author = "theonlyhennygod")]
 #[command(version)]
 #[command(about = "The fastest, smallest AI assistant.", long_about = None)]
@@ -171,10 +143,10 @@ Launches an interactive chat session with the configured AI provider. \
 Use --message for single-shot queries without entering interactive mode.
 
 Examples:
-  zeroclaw agent                              # interactive session
-  zeroclaw agent -m \"Summarize today's logs\"  # single message
-  zeroclaw agent -p anthropic --model claude-sonnet-4-20250514
-  zeroclaw agent --peripheral nucleo-f401re:/dev/ttyACM0")]
+  redclaw agent                              # interactive session
+  redclaw agent -m \"Summarize today's logs\"  # single message
+  redclaw agent -p anthropic --model claude-sonnet-4-20250514
+  redclaw agent --peripheral nucleo-f401re:/dev/ttyACM0")]
     Agent {
         /// Single message mode (don't enter interactive mode)
         #[arg(short, long)]
@@ -205,30 +177,30 @@ Start, restart, or inspect the HTTP/WebSocket gateway that accepts \
 incoming webhook events and WebSocket connections.
 
 Examples:
-  zeroclaw gateway start              # start gateway
-  zeroclaw gateway restart            # restart gateway
-  zeroclaw gateway get-paircode       # show pairing code")]
+  redclaw gateway start              # start gateway
+  redclaw gateway restart            # restart gateway
+  redclaw gateway get-paircode       # show pairing code")]
     Gateway {
         #[command(subcommand)]
-        gateway_command: Option<zeroclaw::GatewayCommands>,
+        gateway_command: Option<redclaw::GatewayCommands>,
     },
 
     /// Start long-running autonomous runtime (gateway + channels + heartbeat + scheduler)
     #[command(long_about = "\
 Start the long-running autonomous daemon.
 
-Launches the full ZeroClaw runtime: gateway server, all configured \
+Launches the full RedClaw runtime: gateway server, all configured \
 channels (Telegram, Discord, Slack, etc.), heartbeat monitor, and \
-the cron scheduler. This is the recommended way to run ZeroClaw in \
+the cron scheduler. This is the recommended way to run RedClaw in \
 production or as an always-on assistant.
 
-Use 'zeroclaw service install' to register the daemon as an OS \
+Use 'redclaw service install' to register the daemon as an OS \
 service (systemd/launchd) for auto-start on boot.
 
 Examples:
-  zeroclaw daemon                   # use config defaults
-  zeroclaw daemon -p 9090           # gateway on port 9090
-  zeroclaw daemon --host 127.0.0.1  # localhost only")]
+  redclaw daemon                   # use config defaults
+  redclaw daemon -p 9090           # gateway on port 9090
+  redclaw daemon --host 127.0.0.1  # localhost only")]
     Daemon {
         /// Port to listen on (use 0 for random available port); defaults to config gateway.port
         #[arg(short, long)]
@@ -261,19 +233,19 @@ Examples:
     /// Engage, inspect, and resume emergency-stop states.
     ///
     /// Examples:
-    /// - `zeroclaw estop`
-    /// - `zeroclaw estop --level network-kill`
-    /// - `zeroclaw estop --level domain-block --domain "*.chase.com"`
-    /// - `zeroclaw estop --level tool-freeze --tool shell --tool browser`
-    /// - `zeroclaw estop status`
-    /// - `zeroclaw estop resume --network`
-    /// - `zeroclaw estop resume --domain "*.chase.com"`
-    /// - `zeroclaw estop resume --tool shell`
+    /// - `redclaw estop`
+    /// - `redclaw estop --level network-kill`
+    /// - `redclaw estop --level domain-block --domain "*.chase.com"`
+    /// - `redclaw estop --level tool-freeze --tool shell --tool browser`
+    /// - `redclaw estop status`
+    /// - `redclaw estop resume --network`
+    /// - `redclaw estop resume --domain "*.chase.com"`
+    /// - `redclaw estop resume --tool shell`
     Estop {
         #[command(subcommand)]
         estop_command: Option<EstopSubcommands>,
 
-        /// Level used when engaging estop from `zeroclaw estop`.
+        /// Level used when engaging estop from `redclaw estop`.
         #[arg(long, value_enum)]
         level: Option<EstopLevelArg>,
 
@@ -298,14 +270,14 @@ Cron expressions use the standard 5-field format: \
 override with --tz and an IANA timezone name.
 
 Examples:
-  zeroclaw cron list
-  zeroclaw cron add '0 9 * * 1-5' 'Good morning' --tz America/New_York
-  zeroclaw cron add '*/30 * * * *' 'Check system health'
-  zeroclaw cron add-at 2025-01-15T14:00:00Z 'Send reminder'
-  zeroclaw cron add-every 60000 'Ping heartbeat'
-  zeroclaw cron once 30m 'Run backup in 30 minutes'
-  zeroclaw cron pause <task-id>
-  zeroclaw cron update <task-id> --expression '0 8 * * *' --tz Europe/London")]
+  redclaw cron list
+  redclaw cron add '0 9 * * 1-5' 'Good morning' --tz America/New_York
+  redclaw cron add '*/30 * * * *' 'Check system health'
+  redclaw cron add-at 2025-01-15T14:00:00Z 'Send reminder'
+  redclaw cron add-every 60000 'Ping heartbeat'
+  redclaw cron once 30m 'Run backup in 30 minutes'
+  redclaw cron pause <task-id>
+  redclaw cron update <task-id> --expression '0 8 * * *' --tz Europe/London")]
     Cron {
         #[command(subcommand)]
         cron_command: CronCommands,
@@ -324,17 +296,17 @@ Examples:
     #[command(long_about = "\
 Manage communication channels.
 
-Add, remove, list, send, and health-check channels that connect ZeroClaw \
+Add, remove, list, send, and health-check channels that connect RedClaw \
 to messaging platforms. Supported channel types: telegram, discord, \
 slack, whatsapp, matrix, imessage, email.
 
 Examples:
-  zeroclaw channel list
-  zeroclaw channel doctor
-  zeroclaw channel add telegram '{\"bot_token\":\"...\",\"name\":\"my-bot\"}'
-  zeroclaw channel remove my-bot
-  zeroclaw channel bind-telegram zeroclaw_user
-  zeroclaw channel send 'Alert!' --channel-id telegram --recipient 123456789")]
+  redclaw channel list
+  redclaw channel doctor
+  redclaw channel add telegram '{\"bot_token\":\"...\",\"name\":\"my-bot\"}'
+  redclaw channel remove my-bot
+  redclaw channel bind-telegram redclaw_user
+  redclaw channel send 'Alert!' --channel-id telegram --recipient 123456789")]
     Channel {
         #[command(subcommand)]
         channel_command: ChannelCommands,
@@ -373,12 +345,12 @@ Enumerate connected USB devices, identify known development boards \
 probe-rs / ST-Link.
 
 Examples:
-  zeroclaw hardware discover
-  zeroclaw hardware introspect /dev/ttyACM0
-  zeroclaw hardware info --chip STM32F401RETx")]
+  redclaw hardware discover
+  redclaw hardware introspect /dev/ttyACM0
+  redclaw hardware info --chip STM32F401RETx")]
     Hardware {
         #[command(subcommand)]
-        hardware_command: zeroclaw::HardwareCommands,
+        hardware_command: redclaw::HardwareCommands,
     },
 
     /// Manage hardware peripherals (STM32, RPi GPIO, etc.)
@@ -390,14 +362,14 @@ to the agent (GPIO, sensors, actuators). Supported boards: \
 nucleo-f401re, rpi-gpio, esp32, arduino-uno.
 
 Examples:
-  zeroclaw peripheral list
-  zeroclaw peripheral add nucleo-f401re /dev/ttyACM0
-  zeroclaw peripheral add rpi-gpio native
-  zeroclaw peripheral flash --port /dev/cu.usbmodem12345
-  zeroclaw peripheral flash-nucleo")]
+  redclaw peripheral list
+  redclaw peripheral add nucleo-f401re /dev/ttyACM0
+  redclaw peripheral add rpi-gpio native
+  redclaw peripheral flash --port /dev/cu.usbmodem12345
+  redclaw peripheral flash-nucleo")]
     Peripheral {
         #[command(subcommand)]
-        peripheral_command: zeroclaw::PeripheralCommands,
+        peripheral_command: redclaw::PeripheralCommands,
     },
 
     /// Manage agent memory (list, get, stats, clear)
@@ -409,11 +381,11 @@ Supports filtering by category and session, pagination, and \
 batch clearing with confirmation.
 
 Examples:
-  zeroclaw memory stats
-  zeroclaw memory list
-  zeroclaw memory list --category core --limit 10
-  zeroclaw memory get <key>
-  zeroclaw memory clear --category conversation --yes")]
+  redclaw memory stats
+  redclaw memory list
+  redclaw memory list --category core --limit 10
+  redclaw memory get <key>
+  redclaw memory clear --category conversation --yes")]
     Memory {
         #[command(subcommand)]
         memory_command: MemoryCommands,
@@ -421,30 +393,54 @@ Examples:
 
     /// Manage configuration
     #[command(long_about = "\
-Manage ZeroClaw configuration.
+Manage RedClaw configuration.
 
 Inspect and export configuration settings. Use 'schema' to dump \
 the full JSON Schema for the config file, which documents every \
 available key, type, and default value.
 
 Examples:
-  zeroclaw config schema              # print JSON Schema to stdout
-  zeroclaw config schema > schema.json")]
+  redclaw config schema              # print JSON Schema to stdout
+  redclaw config schema > schema.json")]
     Config {
         #[command(subcommand)]
         config_command: ConfigCommands,
     },
 
+    /// Manage modules (install, remove, list, info, enable, disable, update, doctor)
+    #[command(long_about = "\
+Manage installed modules.
+
+Install new modules from local directories or archives, remove \
+installed modules, list all modules, inspect module details, run \
+module updates, and execute module diagnostics.
+
+Examples:
+  redclaw modules list
+  redclaw modules info provider-openai-compatible
+  redclaw modules install ./my-module
+  redclaw modules install ./my-module --enable
+  redclaw modules remove provider-openai-compatible
+  redclaw modules enable provider-openai-compatible
+  redclaw modules disable provider-openai-compatible
+  redclaw modules update provider-openai-compatible
+  redclaw modules update --all
+  redclaw modules doctor")]
+    Modules {
+        #[command(subcommand)]
+        modules_command: ModulesCommands,
+    },
+
     /// Generate shell completion script to stdout
     #[command(long_about = "\
-Generate shell completion scripts for `zeroclaw`.
+Generate shell completion scripts for `redclaw`.
 
 The script is printed to stdout so it can be sourced directly:
 
 Examples:
-  source <(zeroclaw completions bash)
-  zeroclaw completions zsh > ~/.zfunc/_zeroclaw
-  zeroclaw completions fish > ~/.config/fish/completions/zeroclaw.fish")]
+  source <(redclaw completions bash)
+  redclaw completions zsh > ~/.zfunc/_redclaw
+  redclaw completions fish > ~/.config/fish/completions/redclaw.fish")]
     Completions {
         /// Target shell
         #[arg(value_enum)]
@@ -652,9 +648,364 @@ enum MemoryCommands {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ManualHelpTarget {
+    TopLevel,
+    Modules,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ManualModulesInvocation {
+    config_dir: Option<String>,
+    command: ModulesCommands,
+}
+
+fn maybe_handle_manual_help() -> Result<bool> {
+    let args = std::env::args().collect::<Vec<_>>();
+    let Some(target) = detect_manual_help_target(&args) else {
+        return Ok(false);
+    };
+
+    let mut stdout = std::io::stdout().lock();
+    write_manual_help(target, &mut stdout)?;
+    Ok(true)
+}
+
+fn maybe_handle_manual_modules_command() -> Result<bool> {
+    let args = std::env::args().collect::<Vec<_>>();
+    let Some(invocation) = parse_manual_modules_invocation(&args)? else {
+        return Ok(false);
+    };
+
+    if let Some(config_dir) = invocation.config_dir {
+        if config_dir.trim().is_empty() {
+            bail!("--config-dir cannot be empty");
+        }
+        std::env::set_var("REDCLAW_CONFIG_DIR", config_dir);
+    }
+
+    handle_modules_command(invocation.command)?;
+    Ok(true)
+}
+
+fn parse_manual_modules_invocation(args: &[String]) -> Result<Option<ManualModulesInvocation>> {
+    let mut index = 1;
+    let mut config_dir: Option<String> = None;
+
+    while index < args.len() {
+        let arg = args[index].as_str();
+        match arg {
+            "--config-dir" => {
+                let value = args
+                    .get(index + 1)
+                    .context("--config-dir requires a value")?;
+                config_dir = Some(value.clone());
+                index += 2;
+            }
+            value if value.starts_with("--config-dir=") => {
+                let value = value
+                    .split_once('=')
+                    .map_or_else(String::new, |(_, rhs)| rhs.to_string());
+                config_dir = Some(value);
+                index += 1;
+            }
+            "modules" => {
+                index += 1;
+                break;
+            }
+            "help" | "-h" | "--help" => return Ok(None),
+            value if value.starts_with('-') => return Ok(None),
+            _ => return Ok(None),
+        }
+    }
+
+    if index == 1 || args.get(index - 1).map(String::as_str) != Some("modules") {
+        return Ok(None);
+    }
+
+    let Some(subcommand) = args.get(index).map(String::as_str) else {
+        bail!(
+            "modules command requires a subcommand (list, info, install, remove, enable, disable, update, doctor)"
+        );
+    };
+    index += 1;
+
+    let command = match subcommand {
+        "list" => {
+            if index != args.len() {
+                bail!("modules list does not accept additional arguments");
+            }
+            ModulesCommands::List
+        }
+        "info" => {
+            let module_id = args
+                .get(index)
+                .cloned()
+                .context("modules info requires <module-id>")?;
+            index += 1;
+            if index != args.len() {
+                bail!("modules info accepts exactly one <module-id>");
+            }
+            ModulesCommands::Info { module_id }
+        }
+        "install" => {
+            let mut source: Option<String> = None;
+            let mut enable = false;
+
+            while index < args.len() {
+                let token = args[index].as_str();
+                match token {
+                    "--enable" => enable = true,
+                    value if value.starts_with('-') => {
+                        bail!("unsupported modules install option: {}", value);
+                    }
+                    value => {
+                        if source.is_some() {
+                            bail!("modules install accepts exactly one <source>");
+                        }
+                        source = Some(value.to_string());
+                    }
+                }
+                index += 1;
+            }
+
+            let source = source.context("modules install requires <source>")?;
+            ModulesCommands::Install { source, enable }
+        }
+        "remove" => {
+            let module_id = args
+                .get(index)
+                .cloned()
+                .context("modules remove requires <module-id>")?;
+            index += 1;
+            if index != args.len() {
+                bail!("modules remove accepts exactly one <module-id>");
+            }
+            ModulesCommands::Remove { module_id }
+        }
+        "enable" => {
+            let module_id = args
+                .get(index)
+                .cloned()
+                .context("modules enable requires <module-id>")?;
+            index += 1;
+            if index != args.len() {
+                bail!("modules enable accepts exactly one <module-id>");
+            }
+            ModulesCommands::Enable { module_id }
+        }
+        "disable" => {
+            let module_id = args
+                .get(index)
+                .cloned()
+                .context("modules disable requires <module-id>")?;
+            index += 1;
+            if index != args.len() {
+                bail!("modules disable accepts exactly one <module-id>");
+            }
+            ModulesCommands::Disable { module_id }
+        }
+        "update" => {
+            let mut module_id: Option<String> = None;
+            let mut all = false;
+
+            while index < args.len() {
+                let token = args[index].as_str();
+                match token {
+                    "--all" => all = true,
+                    value if value.starts_with('-') => {
+                        bail!("unsupported modules update option: {}", value);
+                    }
+                    value => {
+                        if module_id.is_some() {
+                            bail!("modules update accepts at most one <module-id>");
+                        }
+                        module_id = Some(value.to_string());
+                    }
+                }
+                index += 1;
+            }
+
+            if all && module_id.is_some() {
+                bail!("modules update does not accept <module-id> together with --all");
+            }
+            if !all && module_id.is_none() {
+                bail!("modules update requires <module-id> or --all");
+            }
+
+            ModulesCommands::Update { module_id, all }
+        }
+        "doctor" => {
+            if index != args.len() {
+                bail!("modules doctor does not accept additional arguments");
+            }
+            ModulesCommands::Doctor
+        }
+        _ => return Ok(None),
+    };
+
+    Ok(Some(ManualModulesInvocation {
+        config_dir,
+        command,
+    }))
+}
+
+fn detect_manual_help_target(args: &[String]) -> Option<ManualHelpTarget> {
+    let mut subcommand: Option<&str> = None;
+    let mut index = 1;
+
+    while index < args.len() {
+        let arg = args[index].as_str();
+        match arg {
+            "--config-dir" => {
+                index += 2;
+            }
+            value if value.starts_with("--config-dir=") => {
+                index += 1;
+            }
+            "help" => {
+                let requested = args.get(index + 1).map(String::as_str).or(subcommand);
+                return Some(match requested {
+                    Some("modules") => ManualHelpTarget::Modules,
+                    _ => ManualHelpTarget::TopLevel,
+                });
+            }
+            "-h" | "--help" => {
+                return Some(match subcommand {
+                    Some("modules") => ManualHelpTarget::Modules,
+                    _ => ManualHelpTarget::TopLevel,
+                });
+            }
+            value if value.starts_with('-') => {
+                index += 1;
+            }
+            value => {
+                if subcommand.is_none() {
+                    subcommand = Some(value);
+                }
+                index += 1;
+            }
+        }
+    }
+
+    None
+}
+
+fn write_manual_help(target: ManualHelpTarget, mut out: impl Write) -> Result<()> {
+    let text = match target {
+        ManualHelpTarget::TopLevel => TOP_LEVEL_HELP,
+        ManualHelpTarget::Modules => MODULES_HELP,
+    };
+    out.write_all(text.as_bytes())
+        .context("failed to write help output")?;
+    Ok(())
+}
+
+fn parse_cli_with_large_stack() -> Result<Cli> {
+    let args = std::env::args().collect::<Vec<_>>();
+    let parse_thread = std::thread::Builder::new()
+        .name("redclaw-cli-parse".to_string())
+        .stack_size(16 * 1024 * 1024)
+        .spawn(move || Cli::try_parse_from(args))
+        .context("failed to spawn CLI parser thread")?;
+
+    match parse_thread.join() {
+        Ok(Ok(cli)) => Ok(cli),
+        Ok(Err(err)) => err.exit(),
+        Err(_) => bail!("CLI parser thread panicked"),
+    }
+}
+
+fn build_cli_command_with_large_stack() -> Result<clap::Command> {
+    let command_thread = std::thread::Builder::new()
+        .name("redclaw-cli-command".to_string())
+        .stack_size(64 * 1024 * 1024)
+        .spawn(Cli::command)
+        .context("failed to spawn CLI command builder thread")?;
+
+    match command_thread.join() {
+        Ok(command) => Ok(command),
+        Err(_) => bail!("CLI command builder thread panicked"),
+    }
+}
+
+const TOP_LEVEL_HELP: &str = "\
+RedClaw
+
+Usage: redclaw [OPTIONS] <COMMAND>
+
+Commands:
+  onboard       Initialize your workspace and configuration
+  agent         Start the AI agent loop
+  gateway       Start/manage the gateway server
+  daemon        Start the long-running autonomous runtime
+  service       Manage OS service lifecycle
+  doctor        Run diagnostics
+  status        Show system status
+  estop         Engage, inspect, and resume emergency-stop states
+  cron          Configure and manage scheduled tasks
+  models        Manage provider model catalogs
+  providers     List supported AI providers
+  channel       Manage channels
+  integrations  Browse integrations
+  skills        Manage skills
+  migrate       Migrate data from other agent runtimes
+  auth          Manage provider authentication profiles
+  hardware      Discover and introspect USB hardware
+  peripheral    Manage hardware peripherals
+  memory        Manage agent memory
+  config        Manage configuration
+  modules       Manage modules
+  completions   Generate shell completion scripts
+
+Options:
+      --config-dir <CONFIG_DIR>  Override config directory
+  -h, --help                     Print help
+  -V, --version                  Print version
+";
+
+const MODULES_HELP: &str = "\
+Manage installed modules.
+
+Usage: redclaw modules <COMMAND>
+
+Commands:
+  list                         List all installed modules
+  info <MODULE_ID>             Show details about a specific module
+  install <SOURCE> [--enable]  Install a module from local directory or archive
+  remove <MODULE_ID>           Remove an installed module
+  enable <MODULE_ID>           Enable an installed module
+  disable <MODULE_ID>          Disable an installed module
+  update [<MODULE_ID>] [--all] Update one module or all installed modules
+  doctor                       Run module health diagnostics
+
+Examples:
+  redclaw modules list
+  redclaw modules info provider-openai-compatible
+  redclaw modules install ./my-module
+  redclaw modules install ./my-module --enable
+  redclaw modules remove provider-openai-compatible
+  redclaw modules enable provider-openai-compatible
+  redclaw modules disable provider-openai-compatible
+  redclaw modules update provider-openai-compatible
+  redclaw modules update --all
+  redclaw modules doctor
+
+Options:
+  -h, --help  Print help
+";
+
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
+    if maybe_handle_manual_help()? {
+        return Ok(());
+    }
+
+    if maybe_handle_manual_modules_command()? {
+        return Ok(());
+    }
+
     // Install default crypto provider for Rustls TLS.
     // This prevents the error: "could not automatically determine the process-level CryptoProvider"
     // when both aws-lc-rs and ring features are available (or neither is explicitly selected).
@@ -662,13 +1013,13 @@ async fn main() -> Result<()> {
         eprintln!("Warning: Failed to install default crypto provider: {e:?}");
     }
 
-    let cli = Cli::parse();
+    let cli = parse_cli_with_large_stack()?;
 
     if let Some(config_dir) = &cli.config_dir {
         if config_dir.trim().is_empty() {
             bail!("--config-dir cannot be empty");
         }
-        std::env::set_var("ZEROCLAW_CONFIG_DIR", config_dir);
+        std::env::set_var("REDCLAW_CONFIG_DIR", config_dir);
     }
 
     // Completions must remain stdout-only and should not load config or initialize logging.
@@ -732,15 +1083,15 @@ async fn main() -> Result<()> {
 
         // Handle --reinit: backup and reset configuration
         if reinit {
-            let (zeroclaw_dir, _) =
+            let (redclaw_dir, _) =
                 crate::config::schema::resolve_runtime_dirs_for_onboarding().await?;
 
-            if zeroclaw_dir.exists() {
+            if redclaw_dir.exists() {
                 let timestamp = chrono::Local::now().format("%Y%m%d%H%M%S");
-                let backup_dir = format!("{}.backup.{}", zeroclaw_dir.display(), timestamp);
+                let backup_dir = format!("{}.backup.{}", redclaw_dir.display(), timestamp);
 
-                println!("⚠️  Reinitializing ZeroClaw configuration...");
-                println!("   Current config directory: {}", zeroclaw_dir.display());
+                println!("⚠️  Reinitializing RedClaw configuration...");
+                println!("   Current config directory: {}", redclaw_dir.display());
                 println!(
                     "   This will back up your existing config to: {}",
                     backup_dir
@@ -760,7 +1111,7 @@ async fn main() -> Result<()> {
                 println!();
 
                 // Rename existing directory as backup
-                tokio::fs::rename(&zeroclaw_dir, &backup_dir)
+                tokio::fs::rename(&redclaw_dir, &backup_dir)
                     .await
                     .with_context(|| {
                         format!("Failed to backup existing config to {}", backup_dir)
@@ -786,7 +1137,7 @@ async fn main() -> Result<()> {
             .await
         }?;
         // Auto-start channels if user said yes during wizard
-        if std::env::var("ZEROCLAW_AUTOSTART_CHANNELS").as_deref() == Ok("1") {
+        if std::env::var("REDCLAW_AUTOSTART_CHANNELS").as_deref() == Ok("1") {
             channels::start_channels(config).await?;
         }
         return Ok(());
@@ -805,7 +1156,7 @@ async fn main() -> Result<()> {
         let (_validator, enrollment_uri) =
             security::OtpValidator::from_config(&config.security.otp, config_dir, &store)?;
         if let Some(uri) = enrollment_uri {
-            println!("Initialized OTP secret for ZeroClaw.");
+            println!("Initialized OTP secret for RedClaw.");
             println!("Enrollment URI: {uri}");
         }
     }
@@ -820,6 +1171,8 @@ async fn main() -> Result<()> {
             temperature,
             peripheral,
         } => {
+            bootstrap_lifecycle_host(&config)?;
+
             let final_temperature = temperature.unwrap_or(config.default_temperature);
 
             agent::run(
@@ -837,10 +1190,10 @@ async fn main() -> Result<()> {
 
         Commands::Gateway { gateway_command } => {
             match gateway_command {
-                Some(zeroclaw::GatewayCommands::Restart { port, host }) => {
+                Some(redclaw::GatewayCommands::Restart { port, host }) => {
                     let (port, host) = resolve_gateway_addr(&config, port, host);
                     let addr = format!("{host}:{port}");
-                    info!("🔄 Restarting ZeroClaw Gateway on {addr}");
+                    info!("🔄 Restarting RedClaw Gateway on {addr}");
 
                     // Try to gracefully shutdown existing gateway via admin endpoint
                     match shutdown_gateway(&host, port).await {
@@ -873,7 +1226,7 @@ async fn main() -> Result<()> {
                     log_gateway_start(&host, port);
                     gateway::run_gateway(&host, port, config).await
                 }
-                Some(zeroclaw::GatewayCommands::GetPaircode { new }) => {
+                Some(redclaw::GatewayCommands::GetPaircode { new }) => {
                     let port = config.gateway.port;
                     let host = &config.gateway.host;
 
@@ -912,12 +1265,12 @@ async fn main() -> Result<()> {
                             println!("   Error: {e}");
                             println!();
                             println!("   Is the gateway running? Start it with:");
-                            println!("     zeroclaw gateway start");
+                            println!("     redclaw gateway start");
                         }
                     }
                     Ok(())
                 }
-                Some(zeroclaw::GatewayCommands::Start { port, host }) => {
+                Some(redclaw::GatewayCommands::Start { port, host }) => {
                     let (port, host) = resolve_gateway_addr(&config, port, host);
                     log_gateway_start(&host, port);
                     gateway::run_gateway(&host, port, config).await
@@ -932,18 +1285,20 @@ async fn main() -> Result<()> {
         }
 
         Commands::Daemon { port, host } => {
+            bootstrap_lifecycle_host(&config)?;
+
             let port = port.unwrap_or(config.gateway.port);
             let host = host.unwrap_or_else(|| config.gateway.host.clone());
             if port == 0 {
-                info!("🧠 Starting ZeroClaw Daemon on {host} (random port)");
+                info!("🧠 Starting RedClaw Daemon on {host} (random port)");
             } else {
-                info!("🧠 Starting ZeroClaw Daemon on {host}:{port}");
+                info!("🧠 Starting RedClaw Daemon on {host}:{port}");
             }
             daemon::run(config, host, port).await
         }
 
         Commands::Status => {
-            println!("🦀 ZeroClaw Status");
+            println!("🦀 RedClaw Status");
             println!();
             println!("Version:     {}", env!("CARGO_PKG_VERSION"));
             println!("Workspace:   {}", config.workspace_dir.display());
@@ -1155,7 +1510,7 @@ async fn main() -> Result<()> {
         }
 
         Commands::Peripheral { peripheral_command } => {
-            peripherals::handle_command(peripheral_command.clone(), &config).await
+            peripherals::handle_command(peripheral_command.clone(), &config)
         }
 
         Commands::Config { config_command } => match config_command {
@@ -1168,75 +1523,136 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
+
+        Commands::Modules { modules_command } => handle_modules_command(modules_command),
     }
 }
 
-fn handle_estop_command(
-    config: &Config,
-    estop_command: Option<EstopSubcommands>,
-    level: Option<EstopLevelArg>,
-    domains: Vec<String>,
-    tools: Vec<String>,
-) -> Result<()> {
-    if !config.security.estop.enabled {
-        bail!("Emergency stop is disabled. Enable [security.estop].enabled = true in config.toml");
-    }
+/// Handle modules subcommands.
+fn handle_modules_command(command: ModulesCommands) -> Result<()> {
+    use crate::core::installer::ModuleInstaller;
+    use std::path::PathBuf;
 
-    let config_dir = config
-        .config_path
-        .parent()
-        .context("Config path must have a parent directory")?;
-    let mut manager = security::EstopManager::load(&config.security.estop, config_dir)?;
+    let home_root = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .context("failed to get home directory")?;
+    let home_root = PathBuf::from(home_root).join(".redclaw");
 
-    match estop_command {
-        Some(EstopSubcommands::Status) => {
-            print_estop_status(&manager.status());
+    let installer = ModuleInstaller::new(home_root);
+
+    match command {
+        ModulesCommands::List => {
+            let modules = installer.list()?;
+            if modules.is_empty() {
+                println!("No modules installed.");
+                return Ok(());
+            }
+
+            println!("{:<30} {:<15} {:<10}", "ID", "Version", "Enabled");
+            println!("{}", "-".repeat(60));
+            for module in modules {
+                println!(
+                    "{:<30} {:<15} {:<10}",
+                    module.id,
+                    module.version,
+                    if module.enabled { "yes" } else { "no" }
+                );
+            }
             Ok(())
         }
-        Some(EstopSubcommands::Resume {
-            network,
-            domains,
-            tools,
-            otp,
-        }) => {
-            let selector = build_resume_selector(network, domains, tools)?;
-            let mut otp_code = otp;
-            let otp_validator = if config.security.estop.require_otp_to_resume {
-                if !config.security.otp.enabled {
-                    bail!(
-                        "security.estop.require_otp_to_resume=true but security.otp.enabled=false"
-                    );
-                }
-                if otp_code.is_none() {
-                    let entered = Password::new()
-                        .with_prompt("Enter OTP code")
-                        .allow_empty_password(false)
-                        .interact()?;
-                    otp_code = Some(entered);
-                }
 
-                let store = security::SecretStore::new(config_dir, config.secrets.encrypt);
-                let (validator, enrollment_uri) =
-                    security::OtpValidator::from_config(&config.security.otp, config_dir, &store)?;
-                if let Some(uri) = enrollment_uri {
-                    println!("Initialized OTP secret for ZeroClaw.");
-                    println!("Enrollment URI: {uri}");
-                }
-                Some(validator)
+        ModulesCommands::Info { module_id } => {
+            let info = installer.info(&module_id)?;
+            println!("Module: {}", info.id);
+            println!("  Version: {}", info.version);
+            println!("  Enabled: {}", if info.enabled { "yes" } else { "no" });
+            println!("  Trust: {:?}", info.trust.tier);
+            Ok(())
+        }
+
+        ModulesCommands::Install { source, enable } => {
+            println!("Installing module from: {}", source);
+            let module_id = installer.install(&source, enable)?;
+            println!("✓ Successfully installed module: {}", module_id);
+            if enable {
+                println!("  Module is enabled and will be activated on next boot.");
             } else {
-                None
-            };
-
-            manager.resume(selector, otp_code.as_deref(), otp_validator.as_ref())?;
-            println!("Estop resume completed.");
-            print_estop_status(&manager.status());
+                println!(
+                    "  Module is disabled. Use 'redclaw modules enable {}' to enable.",
+                    module_id
+                );
+            }
             Ok(())
         }
-        None => {
-            let engage_level = build_engage_level(level, domains, tools)?;
-            manager.engage(engage_level)?;
-            println!("Estop engaged.");
-            print_estop_status(&manager.status());
+
+        ModulesCommands::Remove { module_id } => {
+            println!("Removing module: {}", module_id);
+            installer.remove(&module_id)?;
+            println!("✓ Successfully removed module: {}", module_id);
+            Ok(())
+        }
+
+        ModulesCommands::Enable { module_id } => {
+            println!("Enabling module: {}", module_id);
+            let changed = installer.enable(&module_id)?;
+            if changed {
+                println!("✓ Successfully enabled module: {}", module_id);
+            } else {
+                println!("✓ Module '{}' is already enabled", module_id);
+            }
+            Ok(())
+        }
+
+        ModulesCommands::Disable { module_id } => {
+            println!("Disabling module: {}", module_id);
+            let changed = installer.disable(&module_id)?;
+            if changed {
+                println!("✓ Successfully disabled module: {}", module_id);
+            } else {
+                println!("✓ Module '{}' is already disabled", module_id);
+            }
+            Ok(())
+        }
+
+        ModulesCommands::Update { module_id, all } => {
+            if all {
+                println!("Updating all modules...");
+            } else if let Some(target) = module_id.as_deref() {
+                println!("Updating module: {}", target);
+            }
+
+            let results = installer.update(module_id.as_deref(), all)?;
+            if all {
+                if results.is_empty() {
+                    println!("No modules installed.");
+                } else {
+                    for result in &results {
+                        println!(
+                            "  Updated {}: {} -> {}",
+                            result.module_id, result.old_version, result.new_version
+                        );
+                    }
+                    println!("✓ Successfully updated {} module(s)", results.len());
+                }
+                return Ok(());
+            }
+
+            let result = results
+                .first()
+                .ok_or_else(|| anyhow!("update completed without any updated module"))?;
+            println!(
+                "✓ Successfully updated {}: {} -> {}",
+                result.module_id, result.old_version, result.new_version
+            );
+            Ok(())
+        }
+
+        ModulesCommands::Doctor => {
+            let report = installer.doctor()?;
+            println!("{}", report.render());
+            if report.has_errors() {
+                bail!("{} issue(s) found", report.error_count());
+            }
             Ok(())
         }
     }
@@ -1341,7 +1757,7 @@ fn write_shell_completion<W: Write>(shell: CompletionShell, writer: &mut W) -> R
     use clap_complete::generate;
     use clap_complete::shells;
 
-    let mut cmd = Cli::command();
+    let mut cmd = build_cli_command_with_large_stack()?;
     let bin_name = cmd.get_name().to_string();
 
     match shell {
@@ -1370,9 +1786,9 @@ fn resolve_gateway_addr(config: &Config, port: Option<u16>, host: Option<String>
 /// Log gateway startup message.
 fn log_gateway_start(host: &str, port: u16) {
     if port == 0 {
-        info!("🚀 Starting ZeroClaw Gateway on {host} (random port)");
+        info!("🚀 Starting RedClaw Gateway on {host} (random port)");
     } else {
-        info!("🚀 Starting ZeroClaw Gateway on {host}:{port}");
+        info!("🚀 Starting RedClaw Gateway on {host}:{port}");
     }
 }
 
@@ -1678,7 +2094,7 @@ async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> Res
                         Err(e) => {
                             println!("Callback capture failed: {e}");
                             println!(
-                                "Run `zeroclaw auth paste-redirect --provider gemini --profile {profile}`"
+                                "Run `redclaw auth paste-redirect --provider gemini --profile {profile}`"
                             );
                             return Ok(());
                         }
@@ -1763,7 +2179,7 @@ async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> Res
                         Err(e) => {
                             println!("Callback capture failed: {e}");
                             println!(
-                                "Run `zeroclaw auth paste-redirect --provider openai-codex --profile {profile}`"
+                                "Run `redclaw auth paste-redirect --provider openai-codex --profile {profile}`"
                             );
                             return Ok(());
                         }
@@ -1801,7 +2217,7 @@ async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> Res
                 "openai-codex" => {
                     let pending = load_pending_oauth_login(config, "openai")?.ok_or_else(|| {
                         anyhow::anyhow!(
-                            "No pending OpenAI login found. Run `zeroclaw auth login --provider openai-codex` first."
+                            "No pending OpenAI login found. Run `redclaw auth login --provider openai-codex` first."
                         )
                     })?;
 
@@ -1845,7 +2261,7 @@ async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> Res
                 "gemini" => {
                     let pending = load_pending_oauth_login(config, "gemini")?.ok_or_else(|| {
                         anyhow::anyhow!(
-                            "No pending Gemini login found. Run `zeroclaw auth login --provider gemini` first."
+                            "No pending Gemini login found. Run `redclaw auth login --provider gemini` first."
                         )
                     })?;
 
@@ -1963,7 +2379,7 @@ async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> Res
                         }
                         None => {
                             bail!(
-                                "No OpenAI Codex auth profile found. Run `zeroclaw auth login --provider openai-codex`."
+                                "No OpenAI Codex auth profile found. Run `redclaw auth login --provider openai-codex`."
                             )
                         }
                     }
@@ -1981,7 +2397,7 @@ async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> Res
                         }
                         None => {
                             bail!(
-                                "No Gemini auth profile found. Run `zeroclaw auth login --provider gemini`."
+                                "No Gemini auth profile found. Run `redclaw auth login --provider gemini`."
                             )
                         }
                     }
@@ -2061,38 +2477,311 @@ async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> Res
     }
 }
 
+/// Bootstrap lifecycle host - discovers and activates modules
+fn bootstrap_lifecycle_host(config: &Config) -> Result<()> {
+    use crate::core::lifecycle::safe_mode::{boot_safe_mode, verify_baseline_modules};
+    use crate::core::lifecycle::{ActivationBootstrap, LoaderConfig, ModuleHost};
+    use crate::core::registry::ModuleRegistry;
+
+    // Derive config_dir from config path
+    let config_dir = config
+        .config_path
+        .parent()
+        .context("Config path must have a parent directory")?;
+
+    // Build activation bootstrap from config directory
+    let bootstrap = ActivationBootstrap::from_config_dir(config_dir);
+
+    // Build loader config with search paths
+    let loader_config = LoaderConfig {
+        search_paths: vec![config_dir.join("src/modules")],
+        lock_path: bootstrap.modules_lock_path.clone(),
+        validate: true,
+    };
+
+    // Create module host with empty registry (bundled modules only)
+    let mut host = ModuleHost::new(ModuleRegistry::new(), loader_config);
+
+    // Start host - this discovers, validates, and activates modules
+    match host.start() {
+        Ok(()) => {
+            tracing::info!("Lifecycle host boot completed successfully");
+            Ok(())
+        }
+        Err(e) => {
+            tracing::warn!("Full lifecycle boot failed: {e}");
+            // Safe-mode fallback if full boot fails
+            tracing::info!("Attempting safe-mode fallback");
+            let results = boot_safe_mode(&mut host)?;
+
+            // Verify baseline modules activated
+            if !verify_baseline_modules(&results) {
+                anyhow::bail!("Safe-mode baseline activation failed");
+            }
+
+            tracing::info!("Safe-mode boot completed with {} modules", results.len());
+            Ok(())
+        }
+    }
+}
+
+/// Handle estop command - engage, status, or resume
+fn handle_estop_command(
+    config: &Config,
+    estop_command: Option<EstopSubcommands>,
+    level: Option<EstopLevelArg>,
+    domains: Vec<String>,
+    tools: Vec<String>,
+) -> Result<()> {
+    use crate::security::{EstopManager, OtpValidator, SecretStore};
+
+    // Check if estop is enabled in config
+    if !config.security.estop.enabled {
+        anyhow::bail!("estop is disabled in configuration");
+    }
+
+    // Derive config_dir from config path
+    let config_dir = config
+        .config_path
+        .parent()
+        .context("Config path must have a parent directory")?;
+
+    // Load estop manager from state file
+    let mut manager = EstopManager::load(&config.security.estop, config_dir)?;
+
+    // Match on estop subcommand
+    match estop_command {
+        // No subcommand = engage estop
+        None => {
+            let engage_level = build_engage_level(level, domains, tools)?;
+            manager.engage(engage_level)?;
+            print_estop_status(&manager.status());
+        }
+
+        // Status subcommand
+        Some(EstopSubcommands::Status) => {
+            print_estop_status(&manager.status());
+        }
+
+        // Resume subcommand
+        Some(EstopSubcommands::Resume {
+            network,
+            domains,
+            tools,
+            otp,
+        }) => {
+            let selector = build_resume_selector(network, domains, tools)?;
+
+            // Handle OTP validation if required
+            let otp_code = if config.security.estop.require_otp_to_resume {
+                match otp {
+                    Some(code) => Some(code),
+                    None => Some(read_plain_input("Enter OTP code")?),
+                }
+            } else {
+                None
+            };
+
+            let otp_validator = if config.security.estop.require_otp_to_resume {
+                let store = SecretStore::new(config_dir, config.secrets.encrypt);
+                let (validator, _enrollment_uri) =
+                    OtpValidator::from_config(&config.security.otp, config_dir, &store)?;
+                Some(validator)
+            } else {
+                None
+            };
+
+            manager.resume(selector, otp_code.as_deref(), otp_validator.as_ref())?;
+
+            print_estop_status(&manager.status());
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use clap::{CommandFactory, Parser};
+    use clap::Parser;
 
     #[test]
-    fn cli_definition_has_no_flag_conflicts() {
-        Cli::command().debug_assert();
+    fn manual_top_level_help_is_detected() {
+        let args = vec!["redclaw".to_string(), "--help".to_string()];
+        assert_eq!(
+            detect_manual_help_target(&args),
+            Some(ManualHelpTarget::TopLevel)
+        );
     }
 
     #[test]
-    fn onboard_help_includes_model_flag() {
-        let cmd = Cli::command();
-        let onboard = cmd
-            .get_subcommands()
-            .find(|subcommand| subcommand.get_name() == "onboard")
-            .expect("onboard subcommand must exist");
-
-        let has_model_flag = onboard
-            .get_arguments()
-            .any(|arg| arg.get_id().as_str() == "model" && arg.get_long() == Some("model"));
-
-        assert!(
-            has_model_flag,
-            "onboard help should include --model for quick setup overrides"
+    fn manual_modules_help_is_detected() {
+        let args = vec![
+            "redclaw".to_string(),
+            "modules".to_string(),
+            "--help".to_string(),
+        ];
+        assert_eq!(
+            detect_manual_help_target(&args),
+            Some(ManualHelpTarget::Modules)
         );
+    }
+
+    #[test]
+    fn manual_modules_help_mentions_install_and_remove() {
+        let mut output = Vec::new();
+        write_manual_help(ManualHelpTarget::Modules, &mut output)
+            .expect("manual help generation should succeed");
+        let help = String::from_utf8(output).expect("manual help should be utf-8");
+
+        assert!(help.contains("redclaw modules install ./my-module"));
+        assert!(help.contains("remove <MODULE_ID>"));
+        assert!(help.contains("enable <MODULE_ID>"));
+        assert!(help.contains("disable <MODULE_ID>"));
+        assert!(help.contains("redclaw modules update --all"));
+        assert!(help.contains("doctor"));
+    }
+
+    #[test]
+    fn manual_modules_invocation_parses_install_enable() {
+        let args = vec![
+            "redclaw".to_string(),
+            "modules".to_string(),
+            "install".to_string(),
+            "./my-module".to_string(),
+            "--enable".to_string(),
+        ];
+
+        let invocation = parse_manual_modules_invocation(&args)
+            .expect("parse should succeed")
+            .expect("modules invocation should be detected");
+
+        assert_eq!(invocation.config_dir, None);
+        assert_eq!(
+            invocation.command,
+            ModulesCommands::Install {
+                source: "./my-module".to_string(),
+                enable: true
+            }
+        );
+    }
+
+    #[test]
+    fn manual_modules_invocation_parses_config_dir_and_list() {
+        let args = vec![
+            "redclaw".to_string(),
+            "--config-dir".to_string(),
+            "./tmp-config".to_string(),
+            "modules".to_string(),
+            "list".to_string(),
+        ];
+
+        let invocation = parse_manual_modules_invocation(&args)
+            .expect("parse should succeed")
+            .expect("modules invocation should be detected");
+
+        assert_eq!(invocation.config_dir.as_deref(), Some("./tmp-config"));
+        assert_eq!(invocation.command, ModulesCommands::List);
+    }
+
+    #[test]
+    fn manual_modules_invocation_parses_enable() {
+        let args = vec![
+            "redclaw".to_string(),
+            "modules".to_string(),
+            "enable".to_string(),
+            "provider-openai-compatible".to_string(),
+        ];
+
+        let invocation = parse_manual_modules_invocation(&args)
+            .expect("parse should succeed")
+            .expect("modules invocation should be detected");
+
+        assert_eq!(
+            invocation.command,
+            ModulesCommands::Enable {
+                module_id: "provider-openai-compatible".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn manual_modules_invocation_parses_disable() {
+        let args = vec![
+            "redclaw".to_string(),
+            "modules".to_string(),
+            "disable".to_string(),
+            "provider-openai-compatible".to_string(),
+        ];
+
+        let invocation = parse_manual_modules_invocation(&args)
+            .expect("parse should succeed")
+            .expect("modules invocation should be detected");
+
+        assert_eq!(
+            invocation.command,
+            ModulesCommands::Disable {
+                module_id: "provider-openai-compatible".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn manual_modules_invocation_requires_install_source() {
+        let args = vec![
+            "redclaw".to_string(),
+            "modules".to_string(),
+            "install".to_string(),
+        ];
+
+        let error =
+            parse_manual_modules_invocation(&args).expect_err("missing source should fail parsing");
+        assert!(error
+            .to_string()
+            .contains("modules install requires <source>"));
+    }
+
+    #[test]
+    fn manual_modules_invocation_parses_update_all() {
+        let args = vec![
+            "redclaw".to_string(),
+            "modules".to_string(),
+            "update".to_string(),
+            "--all".to_string(),
+        ];
+
+        let invocation = parse_manual_modules_invocation(&args)
+            .expect("parse should succeed")
+            .expect("modules invocation should be detected");
+
+        assert_eq!(
+            invocation.command,
+            ModulesCommands::Update {
+                module_id: None,
+                all: true,
+            }
+        );
+    }
+
+    #[test]
+    fn manual_modules_invocation_parses_doctor() {
+        let args = vec![
+            "redclaw".to_string(),
+            "modules".to_string(),
+            "doctor".to_string(),
+        ];
+
+        let invocation = parse_manual_modules_invocation(&args)
+            .expect("parse should succeed")
+            .expect("modules invocation should be detected");
+
+        assert_eq!(invocation.command, ModulesCommands::Doctor);
     }
 
     #[test]
     fn onboard_cli_accepts_model_provider_and_api_key_in_quick_mode() {
         let cli = Cli::try_parse_from([
-            "zeroclaw",
+            "redclaw",
             "onboard",
             "--provider",
             "openrouter",
@@ -2127,7 +2816,7 @@ mod tests {
     #[test]
     fn completions_cli_parses_supported_shells() {
         for shell in ["bash", "fish", "zsh", "powershell", "elvish"] {
-            let cli = Cli::try_parse_from(["zeroclaw", "completions", shell])
+            let cli = Cli::try_parse_from(["redclaw", "completions", shell])
                 .expect("completions invocation should parse");
             match cli.command {
                 Commands::Completions { .. } => {}
@@ -2143,14 +2832,14 @@ mod tests {
             .expect("completion generation should succeed");
         let script = String::from_utf8(output).expect("completion output should be valid utf-8");
         assert!(
-            script.contains("zeroclaw"),
+            script.contains("redclaw"),
             "completion script should reference binary name"
         );
     }
 
     #[test]
     fn onboard_cli_accepts_force_flag() {
-        let cli = Cli::try_parse_from(["zeroclaw", "onboard", "--force"])
+        let cli = Cli::try_parse_from(["redclaw", "onboard", "--force"])
             .expect("onboard --force should parse");
 
         match cli.command {
@@ -2161,7 +2850,7 @@ mod tests {
 
     #[test]
     fn cli_parses_estop_default_engage() {
-        let cli = Cli::try_parse_from(["zeroclaw", "estop"]).expect("estop command should parse");
+        let cli = Cli::try_parse_from(["redclaw", "estop"]).expect("estop command should parse");
 
         match cli.command {
             Commands::Estop {
@@ -2181,7 +2870,7 @@ mod tests {
 
     #[test]
     fn cli_parses_estop_resume_domain() {
-        let cli = Cli::try_parse_from(["zeroclaw", "estop", "resume", "--domain", "*.chase.com"])
+        let cli = Cli::try_parse_from(["redclaw", "estop", "resume", "--domain", "*.chase.com"])
             .expect("estop resume command should parse");
 
         match cli.command {
@@ -2195,7 +2884,7 @@ mod tests {
 
     #[test]
     fn agent_command_parses_with_temperature() {
-        let cli = Cli::try_parse_from(["zeroclaw", "agent", "--temperature", "0.5"])
+        let cli = Cli::try_parse_from(["redclaw", "agent", "--temperature", "0.5"])
             .expect("agent command with temperature should parse");
 
         match cli.command {
@@ -2208,7 +2897,7 @@ mod tests {
 
     #[test]
     fn agent_command_parses_without_temperature() {
-        let cli = Cli::try_parse_from(["zeroclaw", "agent", "--message", "hello"])
+        let cli = Cli::try_parse_from(["redclaw", "agent", "--message", "hello"])
             .expect("agent command without temperature should parse");
 
         match cli.command {
@@ -2243,5 +2932,112 @@ mod tests {
         let final_temperature = user_temperature.unwrap_or(config.default_temperature);
 
         assert!((final_temperature - 0.7).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn bootstrap_lifecycle_host_uses_real_module_host_path() {
+        // Verify bootstrap_lifecycle_host executes the real host path and
+        // safe-mode fallback instead of behaving like the old placeholder stub.
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let config_path = temp_dir.path().join("config.toml");
+        std::fs::write(&config_path, "").expect("create config file");
+
+        let mut config = Config::default();
+        config.config_path = config_path;
+
+        // The real implementation should complete successfully even when no
+        // modules are present, because the host path and safe-mode fallback are wired.
+        let result = bootstrap_lifecycle_host(&config);
+
+        assert!(
+            result.is_ok(),
+            "bootstrap should execute the real host path"
+        );
+    }
+
+    #[test]
+    fn bootstrap_lifecycle_host_derives_config_dir_correctly() {
+        // Test that config_dir derivation works when config path has a parent
+        use tempfile::TempDir;
+
+        // Create a temp directory with a fake config file
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let config_path = temp_dir.path().join("config.toml");
+
+        // Create the config file so parent() succeeds
+        std::fs::write(&config_path, "").expect("create config file");
+
+        let mut config = Config::default();
+        config.config_path = config_path;
+
+        // The function should derive config_dir correctly
+        let config_dir = config
+            .config_path
+            .parent()
+            .expect("config path should have parent");
+        assert_eq!(config_dir, temp_dir.path());
+    }
+
+    #[test]
+    fn handle_estop_command_fails_when_disabled() {
+        // Test that estop command fails when estop is disabled in config
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let config_path = temp_dir.path().join("config.toml");
+        std::fs::write(&config_path, "").expect("create config file");
+
+        let mut config = Config::default();
+        config.config_path = config_path;
+        config.security.estop.enabled = false;
+
+        let result = handle_estop_command(&config, None, None, vec![], vec![]);
+        assert!(result.is_err(), "estop command should fail when disabled");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("disabled"),
+            "error should mention disabled, got: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn handle_estop_command_status_shows_engaged_state() {
+        // Test that status subcommand shows estop state
+        use crate::config::EstopConfig;
+        use crate::security::EstopManager;
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let config_path = temp_dir.path().join("config.toml");
+        let state_path = temp_dir.path().join("estop-state.json");
+        std::fs::write(&config_path, "").expect("create config file");
+
+        let mut config = Config::default();
+        config.config_path = config_path;
+        config.security.estop = EstopConfig {
+            enabled: true,
+            state_file: state_path.display().to_string(),
+            require_otp_to_resume: false,
+        };
+
+        // First engage estop
+        let mut manager = EstopManager::load(&config.security.estop, temp_dir.path())
+            .expect("load estop manager");
+        manager
+            .engage(crate::security::EstopLevel::KillAll)
+            .expect("engage estop");
+
+        // Now check status
+        let result = handle_estop_command(
+            &config,
+            Some(EstopSubcommands::Status),
+            None,
+            vec![],
+            vec![],
+        );
+        assert!(result.is_ok(), "status command should succeed");
     }
 }

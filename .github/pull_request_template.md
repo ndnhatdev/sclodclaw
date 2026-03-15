@@ -2,7 +2,7 @@
 
 Describe this PR in 2-5 bullets:
 
-- Base branch target (`master` for all contributions):
+- Base branch target (`main` for all contributions):
 - Problem:
 - Why it matters:
 - What changed:
@@ -62,7 +62,7 @@ cargo test
 
 - Data-hygiene status (`pass|needs-follow-up`):
 - Redaction/anonymization notes:
-- Neutral wording confirmation (use ZeroClaw/project-native labels if identity-like wording is needed):
+- Neutral wording confirmation (use RedClaw/project-native labels if identity-like wording is needed):
 
 ## Compatibility / Migration
 

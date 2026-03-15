@@ -1,6 +1,6 @@
-# ZeroClaw Repository Map
+# RedClaw Repository Map
 
-ZeroClaw is a Rust-first autonomous agent runtime. It receives messages from messaging platforms, routes them through an LLM, executes tool calls, persists memory, and returns responses. It can also control hardware peripherals and run as a long-lived daemon.
+RedClaw is a Rust-first autonomous agent runtime. It receives messages from messaging platforms, routes them through an LLM, executes tool calls, persists memory, and returns responses. It can also control hardware peripherals and run as a long-lived daemon.
 
 ## Runtime Flow
 
@@ -38,20 +38,19 @@ User message (Telegram/Discord/Slack/...)
 ## Top-Level Layout
 
 ```
-zeroclaw/
+redclaw/
 ├── src/                  # Rust source (the runtime)
-├── crates/robot-kit/     # Separate crate for hardware robot kit
+├── modules/robot-kit/    # Workspace helper crate for robot kit support
 ├── tests/                # Integration/E2E tests
 ├── benches/              # Benchmarks (agent loop)
 ├── docs/contributing/extension-examples.md  # Extension examples (custom provider/channel/tool/memory)
 ├── firmware/             # Embedded firmware for Arduino, ESP32, Nucleo boards
-├── web/                  # Web UI (Vite + TypeScript)
-├── python/               # Python SDK / tools bridge
+├── apps/web/             # Web UI (Vite + TypeScript)
+├── sdk/python/           # Python SDK / tools bridge
 ├── dev/                  # Local dev tooling (Docker, CI scripts, sandbox)
 ├── scripts/              # CI scripts, release automation, bootstrap
 ├── docs/                 # Documentation system (multilingual, runtime refs)
 ├── .github/              # CI workflows, PR templates, automation
-├── playground/           # (empty, experimental scratch space)
 ├── Cargo.toml            # Workspace manifest
 ├── Dockerfile            # Container build
 ├── docker-compose.yml    # Service composition
@@ -67,7 +66,7 @@ zeroclaw/
 
 | File | Lines | Role |
 |---|---|---|
-| `main.rs` | 1,977 | CLI entrypoint. Clap parser, command dispatch. All `zeroclaw <subcommand>` routing lives here. |
+| `main.rs` | 1,977 | CLI entrypoint. Clap parser, command dispatch. All `redhorse <subcommand>` routing lives here. |
 | `lib.rs` | 436 | Module declarations, visibility (`pub` vs `pub(crate)`), CLI command enums (`ServiceCommands`, `ChannelCommands`, `SkillCommands`, etc.) shared between lib and binary. |
 
 ### Core Runtime
@@ -151,7 +150,7 @@ Sandboxing: `bubblewrap.rs`, `firejail.rs`, `landlock.rs`, `docker.rs`, `detect.
 
 | Module | Key Files | Role |
 |---|---|---|
-| `skills/` | `mod.rs` (1.5k), `audit.rs` | **User/community-authored capabilities.** Loaded from `~/.zeroclaw/workspace/skills/<name>/SKILL.md`. CLI: list, install, audit, remove. Optional community sync from open-skills repo. |
+| `skills/` | `mod.rs` (1.5k), `audit.rs` | **User/community-authored capabilities.** Loaded from `~/.redclaw/workspace/skills/<name>/SKILL.md`. CLI: list, install, audit, remove. Optional community sync from open-skills repo. |
 | `skillforge/` | `scout.rs`, `evaluate.rs`, `integrate.rs`, `mod.rs` | **Skill discovery and evaluation.** Scouts for skills, evaluates quality/fitness, integrates into the runtime. |
 
 ### SOP (Standard Operating Procedures)
@@ -194,13 +193,13 @@ Sandboxing: `bubblewrap.rs`, `firejail.rs`, `landlock.rs`, `docker.rs`, `detect.
 
 | Directory | Role |
 |---|---|
-| `crates/robot-kit/` | Separate Rust crate for hardware robot kit functionality |
+| `modules/robot-kit/` | Separate Rust crate for hardware robot kit functionality |
 | `tests/` | Integration and E2E tests (agent loop, config persistence, channel routing, provider resolution, webhook security) |
 | `benches/` | Performance benchmarks (`agent_benchmarks.rs`) |
 | `docs/contributing/extension-examples.md` | Extension examples for custom providers, channels, tools, and memory backends |
 | `firmware/` | Embedded firmware: `arduino/`, `esp32/`, `esp32-ui/`, `nucleo/`, `uno-q-bridge/` |
-| `web/` | Web UI frontend (Vite + TypeScript) |
-| `python/` | Python SDK / tools bridge with its own tests |
+| `apps/web/` | Web UI frontend (Vite + TypeScript) |
+| `sdk/python/` | Python SDK / tools bridge with its own tests |
 | `dev/` | Local development: Docker Compose, CI script (`ci.sh`), config template, sandbox configs |
 | `scripts/` | CI helpers, release automation, bootstrap, contributor tier computation |
 | `docs/` | Documentation system: multilingual (en/zh-CN/ja/ru/fr/vi), runtime references, operations runbooks, security proposals |
@@ -232,7 +231,7 @@ Traits never import concrete implementations.
 ## CLI Command Tree
 
 ```
-zeroclaw
+redhorse
 ├── onboard [--interactive] [--force]     # First-run setup
 ├── agent [-m "msg"] [-p provider]        # Start agent loop
 ├── daemon [-p port]                      # Full runtime (gateway+channels+cron+heartbeat)

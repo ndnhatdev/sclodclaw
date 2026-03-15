@@ -1,12 +1,12 @@
-# ZeroClaw trên Nucleo-F401RE — Hướng dẫn từng bước
+# RedClaw trên Nucleo-F401RE — Hướng dẫn từng bước
 
-Chạy ZeroClaw trên Mac hoặc Linux. Kết nối Nucleo-F401RE qua USB. Điều khiển GPIO (LED, các pin) qua Telegram hoặc CLI.
+Chạy RedClaw trên Mac hoặc Linux. Kết nối Nucleo-F401RE qua USB. Điều khiển GPIO (LED, các pin) qua Telegram hoặc CLI.
 
 ---
 
 ## Lấy thông tin board qua Telegram (Không cần nạp firmware)
 
-ZeroClaw có thể đọc thông tin chip từ Nucleo qua USB **mà không cần nạp firmware nào**. Nhắn tin cho Telegram bot của bạn:
+RedClaw có thể đọc thông tin chip từ Nucleo qua USB **mà không cần nạp firmware nào**. Nhắn tin cho Telegram bot của bạn:
 
 - *"What board info do I have?"*
 - *"Board info"*
@@ -29,21 +29,21 @@ baud = 115200
 
 ```bash
 cargo build --features hardware,probe
-zeroclaw hardware info
-zeroclaw hardware discover
+redclaw hardware info
+redclaw hardware discover
 ```
 
 ---
 
 ## Những gì đã có sẵn (Không cần thay đổi code)
 
-ZeroClaw bao gồm mọi thứ cần thiết cho Nucleo-F401RE:
+RedClaw bao gồm mọi thứ cần thiết cho Nucleo-F401RE:
 
 | Thành phần | Vị trí | Mục đích |
 |------------|--------|---------|
 | Firmware | `firmware/nucleo/` | Embassy Rust — USART2 (115200), gpio_read, gpio_write |
 | Serial peripheral | `src/peripherals/serial.rs` | Giao thức JSON-over-serial (giống Arduino/ESP32) |
-| Flash command | `zeroclaw peripheral flash-nucleo` | Build firmware, nạp qua probe-rs |
+| Flash command | `redclaw peripheral flash-nucleo` | Build firmware, nạp qua probe-rs |
 
 Giao thức: JSON phân tách bằng dòng mới. Request: `{"id":"1","cmd":"gpio_write","args":{"pin":13,"value":1}}`. Response: `{"id":"1","ok":true,"result":"done"}`.
 
@@ -64,12 +64,12 @@ Giao thức: JSON phân tách bằng dòng mới. Request: `{"id":"1","cmd":"gpi
 1. Kết nối Nucleo với Mac/Linux qua USB.
 2. Board xuất hiện như thiết bị USB (ST-Link). Không cần driver riêng trên các hệ thống hiện đại.
 
-### 1.2 Nạp qua ZeroClaw
+### 1.2 Nạp qua RedClaw
 
-Từ thư mục gốc của repo zeroclaw:
+Từ thư mục gốc của repo redclaw:
 
 ```bash
-zeroclaw peripheral flash-nucleo
+redclaw peripheral flash-nucleo
 ```
 
 Lệnh này build `firmware/nucleo` và chạy `probe-rs run --chip STM32F401RETx`. Firmware chạy ngay sau khi nạp xong.
@@ -93,9 +93,9 @@ USART2 (PA2/PA3) được bridge sang cổng COM ảo của ST-Link, vì vậy m
 
 ---
 
-## Phase 3: Cấu hình ZeroClaw
+## Phase 3: Cấu hình RedClaw
 
-Thêm vào `~/.zeroclaw/config.toml`:
+Thêm vào `~/.redclaw/config.toml`:
 
 ```toml
 [peripherals]
@@ -113,13 +113,13 @@ baud = 115200
 ## Phase 4: Chạy và Kiểm thử
 
 ```bash
-zeroclaw daemon --host 127.0.0.1 --port 3000
+redclaw daemon --host 127.0.0.1 --port 3000
 ```
 
 Hoặc dùng agent trực tiếp:
 
 ```bash
-zeroclaw agent --message "Turn on the LED on pin 13"
+redclaw agent --message "Turn on the LED on pin 13"
 ```
 
 Pin 13 = PA5 = User LED (LD2) trên Nucleo-F401RE.
@@ -132,9 +132,9 @@ Pin 13 = PA5 = User LED (LD2) trên Nucleo-F401RE.
 |------|------|
 | 1 | Kết nối Nucleo qua USB |
 | 2 | `cargo install probe-rs-tools --locked` |
-| 3 | `zeroclaw peripheral flash-nucleo` |
+| 3 | `redclaw peripheral flash-nucleo` |
 | 4 | Thêm Nucleo vào config.toml (path = serial port của bạn) |
-| 5 | `zeroclaw daemon` hoặc `zeroclaw agent -m "Turn on LED"` |
+| 5 | `redclaw daemon` hoặc `redclaw agent -m "Turn on LED"` |
 
 ---
 
@@ -144,4 +144,4 @@ Pin 13 = PA5 = User LED (LD2) trên Nucleo-F401RE.
 - **Không tìm thấy probe-rs** — `cargo install probe-rs-tools --locked` (crate `probe-rs` là thư viện; CLI nằm trong `probe-rs-tools`)
 - **Không phát hiện được probe** — Đảm bảo Nucleo đã kết nối. Thử cáp/cổng USB khác.
 - **Không tìm thấy serial port** — Trên Linux, thêm user vào nhóm `dialout`: `sudo usermod -a -G dialout $USER`, rồi đăng xuất/đăng nhập lại.
-- **Lệnh GPIO bị bỏ qua** — Kiểm tra `path` trong config có khớp với serial port của bạn. Chạy `zeroclaw peripheral list` để xác nhận.
+- **Lệnh GPIO bị bỏ qua** — Kiểm tra `path` trong config có khớp với serial port của bạn. Chạy `redclaw peripheral list` để xác nhận.

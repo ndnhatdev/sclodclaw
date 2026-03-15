@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
@@ -32,8 +32,8 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
 
-      - name: Ensure web/dist placeholder exists
-        run: mkdir -p web/dist && touch web/dist/.gitkeep
+      - name: Ensure apps/web/dist placeholder exists
+        run: mkdir -p apps/web/dist && touch apps/web/dist/.gitkeep
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -55,8 +55,8 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
 
-      - name: Ensure web/dist placeholder exists
-        run: mkdir -p web/dist && touch web/dist/.gitkeep
+      - name: Ensure apps/web/dist placeholder exists
+        run: mkdir -p apps/web/dist && touch apps/web/dist/.gitkeep
 
       - name: Run strict delta lint gate
         run: bash scripts/ci/rust_strict_delta_gate.sh
@@ -75,8 +75,8 @@ jobs:
           toolchain: 1.92.0
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
 
-      - name: Ensure web/dist placeholder exists
-        run: mkdir -p web/dist && touch web/dist/.gitkeep
+      - name: Ensure apps/web/dist placeholder exists
+        run: mkdir -p apps/web/dist && touch apps/web/dist/.gitkeep
 
       - name: Install mold linker
         run: |
@@ -119,8 +119,8 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y mold
 
-      - name: Ensure web/dist placeholder exists
-        run: mkdir -p web/dist && touch web/dist/.gitkeep
+      - name: Ensure apps/web/dist placeholder exists
+        run: mkdir -p apps/web/dist && touch apps/web/dist/.gitkeep
 
       - name: Build release
         shell: bash

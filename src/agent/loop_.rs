@@ -6,6 +6,7 @@ use crate::observability::{self, runtime_trace, Observer, ObserverEvent};
 use crate::providers::{
     self, ChatMessage, ChatRequest, Provider, ProviderCapabilityError, ToolCall,
 };
+use crate::rag::HardwareRag;
 use crate::runtime;
 use crate::security::SecurityPolicy;
 use crate::tools::{self, Tool};
@@ -283,7 +284,7 @@ async fn build_context(mem: &dyn Memory, user_msg: &str, min_relevance_score: f6
 /// Build hardware datasheet context from RAG when peripherals are enabled.
 /// Includes pin-alias lookup (e.g. "red_led" → 13) when query matches, plus retrieved chunks.
 fn build_hardware_context(
-    rag: &crate::rag::HardwareRag,
+    rag: &HardwareRag,
     user_msg: &str,
     boards: &[String],
     chunk_limit: usize,
@@ -964,7 +965,7 @@ fn parse_perl_style_tool_calls(response: &str) -> Vec<ParsedToolCall> {
 /// ```text
 /// <FunctionCall>
 /// file_read
-/// <code>path>/Users/kylelampa/Documents/zeroclaw/README.md</code>
+/// <code>path>/Users/kylelampa/Documents/redclaw/README.md</code>
 /// </FunctionCall>
 /// ```
 fn parse_function_call_tool_calls(response: &str) -> Vec<ParsedToolCall> {
@@ -1012,7 +1013,7 @@ fn parse_function_call_tool_calls(response: &str) -> Vec<ParsedToolCall> {
 }
 
 /// Parse GLM-style tool calls from response text.
-/// Map tool name aliases from various LLM providers to ZeroClaw tool names.
+/// Map tool name aliases from various LLM providers to RedClaw tool names.
 /// This handles variations like "fileread" -> "file_read", "bash" -> "shell", etc.
 fn map_tool_name_alias(tool_name: &str) -> &str {
     match tool_name {
@@ -1122,7 +1123,7 @@ fn parse_glm_style_tool_calls(text: &str) -> Vec<(String, serde_json::Value, Opt
 ///
 /// When a model emits a shortened call like `shell>uname -a` (without an
 /// explicit `/param_name`), we need to infer which parameter the value maps
-/// to. This function encodes the mapping for known ZeroClaw tools.
+/// to. This function encodes the mapping for known RedClaw tools.
 fn default_param_for_tool(tool: &str) -> &'static str {
     match tool {
         "shell" | "bash" | "sh" | "exec" | "command" | "cmd" => "command",
@@ -1697,7 +1698,7 @@ fn parse_tool_calls(response: &str) -> (String, Vec<ParsedToolCall>) {
     // (e.g., in emails, files, or web pages) could include JSON that mimics a
     // tool call. Tool calls MUST be explicitly wrapped in either:
     // 1. OpenAI-style JSON with a "tool_calls" array
-    // 2. ZeroClaw tool-call tags (<tool_call>, <toolcall>, <tool-call>)
+    // 2. RedClaw tool-call tags (<tool_call>, <toolcall>, <tool-call>)
     // 3. Markdown code blocks with tool_call/toolcall/tool-call language
     // 4. Explicit GLM line-based call formats (e.g. `shell/command>...`)
     // This ensures only the LLM's intentional tool calls are executed.
@@ -2868,7 +2869,7 @@ pub async fn run(
     );
 
     let peripheral_tools: Vec<Box<dyn Tool>> =
-        crate::peripherals::create_peripheral_tools(&config.peripherals).await?;
+        crate::peripherals::create_peripheral_tools(&config.peripherals)?;
     if !peripheral_tools.is_empty() {
         tracing::info!(count = peripheral_tools.len(), "Peripheral tools added");
         tools_registry.extend(peripheral_tools);
@@ -2888,7 +2889,7 @@ pub async fn run(
     let provider_runtime_options = providers::ProviderRuntimeOptions {
         auth_profile_override: None,
         provider_api_url: config.api_url.clone(),
-        zeroclaw_dir: config.config_path.parent().map(std::path::PathBuf::from),
+        redclaw_dir: config.config_path.parent().map(std::path::PathBuf::from),
         secrets_encrypt: config.secrets.encrypt,
         reasoning_enabled: config.runtime.reasoning_enabled,
         provider_timeout_secs: Some(config.provider_timeout_secs),
@@ -2910,14 +2911,14 @@ pub async fn run(
     });
 
     // ── Hardware RAG (datasheet retrieval when peripherals + datasheet_dir) ──
-    let hardware_rag: Option<crate::rag::HardwareRag> = config
+    let hardware_rag: Option<HardwareRag> = config
         .peripherals
         .datasheet_dir
         .as_ref()
         .filter(|d| !d.trim().is_empty())
-        .map(|dir| crate::rag::HardwareRag::load(&config.workspace_dir, dir.trim()))
+        .map(|dir| HardwareRag::load(&config.workspace_dir, dir.trim()))
         .and_then(Result::ok)
-        .filter(|r: &crate::rag::HardwareRag| !r.is_empty());
+        .filter(|r: &HardwareRag| !r.is_empty());
     if let Some(ref rag) = hardware_rag {
         tracing::info!(chunks = rag.len(), "Hardware RAG loaded");
     }
@@ -3020,7 +3021,7 @@ pub async fn run(
         ));
         tool_descs.push((
             "arduino_upload",
-            "Upload agent-generated Arduino sketch. Use when: user asks for 'make a heart', 'blink pattern', or custom LED behavior on Arduino. You write the full .ino code; ZeroClaw compiles and uploads it. Pin 13 = built-in LED on Uno.",
+            "Upload agent-generated Arduino sketch. Use when: user asks for 'make a heart', 'blink pattern', or custom LED behavior on Arduino. You write the full .ino code; RedClaw compiles and uploads it. Pin 13 = built-in LED on Uno.",
         ));
         tool_descs.push((
             "hardware_memory_map",
@@ -3128,7 +3129,7 @@ pub async fn run(
         println!("{response}");
         observer.record_event(&ObserverEvent::TurnComplete);
     } else {
-        println!("🦀 ZeroClaw Interactive Mode");
+        println!("🦀 RedClaw Interactive Mode");
         println!("Type /help for commands.\n");
         let cli = crate::channels::CliChannel::new();
 
@@ -3349,7 +3350,7 @@ pub async fn process_message(config: Config, message: &str) -> Result<String> {
         &config,
     );
     let peripheral_tools: Vec<Box<dyn Tool>> =
-        crate::peripherals::create_peripheral_tools(&config.peripherals).await?;
+        crate::peripherals::create_peripheral_tools(&config.peripherals)?;
     tools_registry.extend(peripheral_tools);
 
     let provider_name = config.default_provider.as_deref().unwrap_or("openrouter");
@@ -3360,7 +3361,7 @@ pub async fn process_message(config: Config, message: &str) -> Result<String> {
     let provider_runtime_options = providers::ProviderRuntimeOptions {
         auth_profile_override: None,
         provider_api_url: config.api_url.clone(),
-        zeroclaw_dir: config.config_path.parent().map(std::path::PathBuf::from),
+        redclaw_dir: config.config_path.parent().map(std::path::PathBuf::from),
         secrets_encrypt: config.secrets.encrypt,
         reasoning_enabled: config.runtime.reasoning_enabled,
         provider_timeout_secs: Some(config.provider_timeout_secs),
@@ -3375,14 +3376,14 @@ pub async fn process_message(config: Config, message: &str) -> Result<String> {
         &provider_runtime_options,
     )?;
 
-    let hardware_rag: Option<crate::rag::HardwareRag> = config
+    let hardware_rag: Option<HardwareRag> = config
         .peripherals
         .datasheet_dir
         .as_ref()
         .filter(|d| !d.trim().is_empty())
-        .map(|dir| crate::rag::HardwareRag::load(&config.workspace_dir, dir.trim()))
+        .map(|dir| HardwareRag::load(&config.workspace_dir, dir.trim()))
         .and_then(Result::ok)
-        .filter(|r: &crate::rag::HardwareRag| !r.is_empty());
+        .filter(|r: &HardwareRag| !r.is_empty());
     let board_names: Vec<String> = config
         .peripherals
         .boards
@@ -3419,7 +3420,7 @@ pub async fn process_message(config: Config, message: &str) -> Result<String> {
         ));
         tool_descs.push((
             "arduino_upload",
-            "Upload Arduino sketch. Use for 'make a heart', custom patterns. You write full .ino code; ZeroClaw uploads it.",
+            "Upload Arduino sketch. Use for 'make a heart', custom patterns. You write full .ino code; RedClaw uploads it.",
         ));
         tool_descs.push((
             "hardware_memory_map",

@@ -1,4 +1,6 @@
+pub mod env;
 pub mod schema;
+pub mod state_paths;
 pub mod traits;
 
 #[allow(unused_imports)]
@@ -18,6 +20,11 @@ pub use schema::{
     SkillsConfig, SkillsPromptInjectionMode, SlackConfig, StorageConfig, StorageProviderConfig,
     StorageProviderSection, StreamMode, TelegramConfig, TranscriptionConfig, TtsConfig,
     TunnelConfig, WebFetchConfig, WebSearchConfig, WebhookConfig,
+};
+#[allow(unused_imports)]
+pub use state_paths::{
+    default_config_and_workspace_dirs, default_config_dir, resolve_config_dir_for_workspace,
+    resolve_workspace_dir_from_config_dir, state_paths_for,
 };
 
 pub fn name_and_presence<T: traits::ChannelConfig>(channel: Option<&T>) -> (&'static str, bool) {

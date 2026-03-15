@@ -1,6 +1,6 @@
 //! Static file serving for the embedded web dashboard.
 //!
-//! Uses `rust-embed` to bundle the `web/dist/` directory into the binary at compile time.
+//! Uses `rust-embed` to bundle the `apps/web/dist/` directory into the binary at compile time.
 
 use axum::{
     http::{header, StatusCode, Uri},
@@ -9,7 +9,7 @@ use axum::{
 use rust_embed::Embed;
 
 #[derive(Embed)]
-#[folder = "web/dist/"]
+#[folder = "apps/web/dist/"]
 struct WebAssets;
 
 /// Serve static files from `/_app/*` path

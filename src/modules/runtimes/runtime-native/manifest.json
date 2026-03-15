@@ -1,0 +1,37 @@
+{
+  "id": "runtime-native",
+  "name": "Native Runtime",
+  "version": "0.1.0",
+  "kind": "runtime",
+  "engine": {
+    "redhorse": ">=0.1.0 <0.2.0"
+  },
+  "artifact": {
+    "kind": "bundled",
+    "entry": "modules/runtimes/runtime-native"
+  },
+  "execution": {
+    "mode": "in_process"
+  },
+  "trust": {
+    "required": "official"
+  },
+  "capabilities": {
+    "requested": [],
+    "parameterized": []
+  },
+  "dependencies": [],
+  "config": {
+    "schema": {},
+    "defaultFragment": {}
+  },
+  "activation": {
+    "events": [
+      "runtime.activate"
+    ],
+    "safeModeEligible": true
+  },
+  "install": {
+    "source": "bundled"
+  }
+}

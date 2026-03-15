@@ -65,13 +65,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: apps/web/package-lock.json
       - name: Build web dashboard
-        run: cd web && npm ci && npm run build
+        run: cd apps/web && npm ci && npm run build
       - uses: actions/upload-artifact@v4
         with:
           name: web-dist
-          path: web/dist/
+          path: apps/web/dist/
           retention-days: 1
 
   build:
@@ -85,22 +85,22 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact: zeroclaw
+            artifact: redclaw
             ext: tar.gz
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            artifact: zeroclaw
+            artifact: redclaw
             ext: tar.gz
             cross_compiler: gcc-aarch64-linux-gnu
             linker_env: CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER
             linker: aarch64-linux-gnu-gcc
           - os: macos-14
             target: aarch64-apple-darwin
-            artifact: zeroclaw
+            artifact: redclaw
             ext: tar.gz
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact: zeroclaw.exe
+            artifact: redclaw.exe
             ext: zip
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -114,7 +114,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: web-dist
-          path: web/dist/
+          path: apps/web/dist/
 
       - name: Install cross compiler
         if: matrix.cross_compiler
@@ -134,18 +134,18 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ../../../zeroclaw-${{ matrix.target }}.${{ matrix.ext }} ${{ matrix.artifact }}
+          tar czf ../../../redclaw-${{ matrix.target }}.${{ matrix.ext }} ${{ matrix.artifact }}
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
-          7z a ../../../zeroclaw-${{ matrix.target }}.${{ matrix.ext }} ${{ matrix.artifact }}
+          7z a ../../../redclaw-${{ matrix.target }}.${{ matrix.ext }} ${{ matrix.artifact }}
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: zeroclaw-${{ matrix.target }}
-          path: zeroclaw-${{ matrix.target }}.${{ matrix.ext }}
+          name: redclaw-${{ matrix.target }}
+          path: redclaw-${{ matrix.target }}.${{ matrix.ext }}
           retention-days: 14
 
   publish:
@@ -157,7 +157,7 @@ jobs:
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          pattern: zeroclaw-*
+          pattern: redclaw-*
           path: artifacts
 
       - name: Generate checksums
