@@ -1,0 +1,12 @@
+{
+  "id": "provider-openai-compatible",
+  "name": "OpenAI Compatible Provider",
+  "version": "0.1.0",
+  "kind": "provider",
+  "execution_mode": "in-process",
+  "description": "OpenAI-compatible API provider",
+  "dependencies": [
+    "runtime-native"
+  ],
+  "trust_tier": "official"
+}

@@ -1,0 +1,41 @@
+{
+  "id": "channel-cli",
+  "name": "Channel Cli",
+  "version": "0.1.0",
+  "kind": "channel",
+  "engine": {
+    "redhorse": ">=0.1.0 <0.2.0"
+  },
+  "artifact": {
+    "kind": "bundled",
+    "entry": "modules/channels/channel-cli"
+  },
+  "execution": {
+    "mode": "in_process"
+  },
+  "trust": {
+    "required": "official"
+  },
+  "capabilities": {
+    "requested": [],
+    "parameterized": []
+  },
+  "dependencies": [
+    {
+      "id": "runtime-native"
+    }
+  ],
+  "config": {
+    "schema": {},
+    "defaultFragment": {}
+  },
+  "activation": {
+    "events": [
+      "channel.activate"
+    ],
+    "safeModeEligible": true
+  },
+  "install": {
+    "source": "bundled"
+  }
+}

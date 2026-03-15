@@ -1,0 +1,12 @@
+{
+  "id": "tool-shell",
+  "name": "Shell Tool",
+  "version": "0.1.0",
+  "kind": "tool",
+  "execution_mode": "process",
+  "description": "Shell command execution with sandboxing",
+  "dependencies": [
+    "runtime-native"
+  ],
+  "trust_tier": "official"
+}

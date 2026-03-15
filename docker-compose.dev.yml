@@ -1,0 +1,49 @@
+# RedClaw Development Docker Compose
+# 
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up -d
+#   docker-compose -f docker-compose.dev.yml logs -f
+#   docker-compose -f docker-compose.dev.yml down
+
+version: '3.8'
+
+services:
+  redclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    image: redclaw:dev
+    container_name: redclaw-dev
+    ports:
+      - "42617:42617"
+    volumes:
+      - redclaw-data:/redclaw-data
+      - ./workspace:/redclaw-data/workspace
+    environment:
+      - REDCLAW_WORKSPACE=/redclaw-data/workspace
+      - REDCLAW_GATEWAY_PORT=42617
+      - PROVIDER=ollama
+      - REDCLAW_MODEL=llama3.2
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redclaw", "--help"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-dev
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    profiles:
+      - ollama
+
+volumes:
+  redclaw-data:
+  ollama-data:
