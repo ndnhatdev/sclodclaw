@@ -70,17 +70,17 @@ Examples:
 /// Service management subcommands
 #[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ServiceCommands {
-    /// Install daemon service unit for auto-start and restart
+    /// Install RedClaw daemon service for auto-start
     Install,
-    /// Start daemon service
+    /// Start installed RedClaw daemon service
     Start,
-    /// Stop daemon service
+    /// Stop running RedClaw daemon service
     Stop,
-    /// Restart daemon service to apply latest config
+    /// Restart daemon service to apply current config
     Restart,
-    /// Check daemon service status
+    /// Show daemon service status and active unit/task
     Status,
-    /// Uninstall daemon service unit
+    /// Uninstall daemon service and local registration files
     Uninstall,
 }
 
@@ -100,6 +100,9 @@ Add a new channel configuration.
 Provide the channel type and a JSON object with the required \
 configuration keys for that channel type.
 
+This command currently helps you stage channel setup, but it is not yet a full \
+declarative mutator on par with `skills install` or `modules install`.
+
 Supported types: telegram, discord, slack, whatsapp, matrix, imessage, email.
 
 Examples:
@@ -111,7 +114,7 @@ Examples:
         /// Optional configuration as JSON
         config: String,
     },
-    /// Remove a channel configuration
+    /// Remove a channel configuration (currently a guided/redirected path)
     Remove {
         /// Channel name to remove
         name: String,
@@ -352,7 +355,7 @@ pub enum MemoryCommands {
 /// Integration subcommands
 #[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum IntegrationCommands {
-    /// Show details about a specific integration
+    /// Show status and setup hints for one integration by name
     Info {
         /// Integration name
         name: String,
@@ -366,8 +369,11 @@ pub enum HardwareCommands {
     #[command(long_about = "\
 Enumerate USB devices and show known boards.
 
-Scans connected USB devices by VID/PID and matches them against \
-known development boards (STM32 Nucleo, Arduino, ESP32).
+Scans connected USB devices by VID/PID and matches them against known
+development boards (STM32 Nucleo, Arduino, ESP32).
+
+Note: the broader hardware command family is still scaffolded in this cut;
+output may remain placeholder while implementation matures.
 
 Examples:
   redclaw hardware discover")]
@@ -376,8 +382,10 @@ Examples:
     #[command(long_about = "\
 Introspect a device by its serial or device path.
 
-Opens the specified device path and queries for board information, \
-firmware version, and supported capabilities.
+Opens the specified device path and attempts to query board information.
+
+Note: the broader hardware command family is still scaffolded in this cut;
+output may remain placeholder while implementation matures.
 
 Examples:
   redclaw hardware introspect /dev/ttyACM0
@@ -390,8 +398,11 @@ Examples:
     #[command(long_about = "\
 Get chip info via USB using probe-rs over ST-Link.
 
-Queries the target MCU directly through the debug probe without \
-requiring any firmware on the target board.
+Queries the target MCU directly through the debug probe without requiring
+firmware on the target board.
+
+Note: the broader hardware command family is still scaffolded in this cut;
+output may remain placeholder while implementation matures.
 
 Examples:
   redclaw hardware info
@@ -412,9 +423,11 @@ pub enum PeripheralCommands {
     #[command(long_about = "\
 Add a peripheral by board type and transport path.
 
-Registers a hardware board so the agent can use its tools (GPIO, \
-sensors, actuators). Use 'native' as path for local GPIO on \
-single-board computers like Raspberry Pi.
+Registers a hardware board so the agent can use board-linked tools.
+Use 'native' as path for local GPIO on single-board computers.
+
+Note: the broader peripheral command family is still scaffolded in this cut;
+output may remain placeholder while implementation matures.
 
 Supported boards: nucleo-f401re, rpi-gpio, esp32, arduino-uno.
 
@@ -432,8 +445,11 @@ Examples:
     #[command(long_about = "\
 Flash RedClaw firmware to an Arduino board.
 
-Generates the .ino sketch, installs arduino-cli if it is not \
-already available, compiles, and uploads the firmware.
+Generates the .ino sketch, installs arduino-cli if it is not already
+available, compiles, and uploads the firmware.
+
+Note: the broader peripheral command family is still scaffolded in this cut;
+output may remain placeholder while implementation matures.
 
 Examples:
   redclaw peripheral flash

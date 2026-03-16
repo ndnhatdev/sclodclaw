@@ -81,6 +81,7 @@ Options:
   --prebuilt-only            Install only from latest release binary (no source build fallback)
   --force-source-build       Disable prebuilt flow and always build from source
   --onboard                  Run onboarding after install
+  --no-onboard               Skip onboarding even in interactive auto mode
   --interactive-onboard      Run interactive onboarding (implies --onboard)
   --api-key <key>            API key for non-interactive onboarding
   --provider <id>            Provider for non-interactive onboarding (default: openrouter)
@@ -101,10 +102,11 @@ Examples:
   ./install.sh --docker
 
   # Remote one-liner
-  curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/single-owner-history-clean/install.sh | bash
 
 Environment:
   REDCLAW_CONTAINER_CLI     Container CLI command (default: docker; auto-fallback: podman)
+  REDCLAW_GIT_REF           Git branch or tag to clone for bootstrap (default: single-owner-history-clean)
   REDCLAW_DOCKER_DATA_DIR   Host path for Docker config/workspace persistence
   REDCLAW_DOCKER_IMAGE      Docker image tag to build/run (default: redclaw-bootstrap:local)
   REDCLAW_API_KEY           Used when --api-key is not provided
@@ -527,7 +529,7 @@ run_guided_installer() {
   fi
 
   echo
-  echo "Redhorse guided installer"
+  echo "RedClaw guided installer"
   echo "Answer a few questions, then the installer will run automatically."
   echo
 
@@ -561,7 +563,8 @@ run_guided_installer() {
     SKIP_INSTALL=true
   fi
 
-  if prompt_yes_no "Run onboarding after install?" "no"; then
+  ONBOARD_DECISION_MADE=true
+  if prompt_yes_no "Run onboarding after install?" "yes"; then
     RUN_ONBOARD=true
     if prompt_yes_no "Use interactive onboarding?" "yes"; then
       INTERACTIVE_ONBOARD=true
@@ -694,7 +697,7 @@ run_docker_bootstrap() {
     info "Skipping Docker image build"
     if ! "$CONTAINER_CLI" image inspect "$docker_image" >/dev/null 2>&1; then
       warn "Local Docker image ($docker_image) was not found."
-      info "Pulling official Redhorse image ($fallback_image)"
+      info "Pulling official RedClaw image ($fallback_image)"
       if ! "$CONTAINER_CLI" pull "$fallback_image"; then
         error "Failed to pull fallback Docker image: $fallback_image"
         error "Run without --skip-build to build locally, or verify access to GHCR."
@@ -766,6 +769,7 @@ SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" >/dev/null 2>&1 && pwd || pwd)"
 ROOT_DIR="$SCRIPT_DIR"
 REPO_URL="https://github.com/ndnhatdev/sclodclaw.git"
+REPO_REF="${REDCLAW_GIT_REF:-single-owner-history-clean}"
 ORIGINAL_ARG_COUNT=$#
 GUIDED_MODE="auto"
 
@@ -776,6 +780,7 @@ PREFER_PREBUILT=false
 PREBUILT_ONLY=false
 FORCE_SOURCE_BUILD=false
 RUN_ONBOARD=false
+ONBOARD_DECISION_MADE=false
 INTERACTIVE_ONBOARD=false
 SKIP_BUILD=false
 SKIP_INSTALL=false
@@ -821,11 +826,18 @@ while [[ $# -gt 0 ]]; do
       ;;
     --onboard)
       RUN_ONBOARD=true
+      ONBOARD_DECISION_MADE=true
+      shift
+      ;;
+    --no-onboard)
+      RUN_ONBOARD=false
+      ONBOARD_DECISION_MADE=true
       shift
       ;;
     --interactive-onboard)
       RUN_ONBOARD=true
       INTERACTIVE_ONBOARD=true
+      ONBOARD_DECISION_MADE=true
       shift
       ;;
     --api-key)
@@ -954,8 +966,8 @@ if [[ ! -f "$WORK_DIR/Cargo.toml" ]]; then
 
   if [[ -z "$WORK_DIR" || "$WORK_DIR" == "$ROOT_DIR" ]]; then
     TEMP_DIR="$(mktemp -d -t redclaw-bootstrap-XXXXXX)"
-    info "No local RedClaw repository detected; cloning latest main branch"
-    git clone --depth 1 --branch main "$REPO_URL" "$TEMP_DIR"
+    info "No local RedClaw repository detected; cloning ref '$REPO_REF'"
+    git clone --depth 1 --branch "$REPO_REF" "$REPO_URL" "$TEMP_DIR"
     WORK_DIR="$TEMP_DIR"
     TEMP_CLONE=true
   fi
@@ -988,7 +1000,7 @@ if [[ "$DOCKER_MODE" == true ]]; then
 
 ✅ Docker bootstrap complete.
 
-Your containerized Redhorse data is persisted under:
+Your containerized RedClaw data is persisted under:
 DONE
   echo "  $DOCKER_DATA_DIR"
   cat <<'DONE'
@@ -1045,6 +1057,15 @@ if [[ "$SKIP_INSTALL" == false ]]; then
   cargo install --path "$WORK_DIR" --force --locked
 else
   info "Skipping install"
+fi
+
+# OpenClaw-style setup flow:
+# when running interactively with no explicit onboarding preference,
+# automatically open terminal onboarding after a successful install.
+if [[ "$RUN_ONBOARD" == false && "$ONBOARD_DECISION_MADE" == false && "$DOCKER_MODE" == false && "$ORIGINAL_ARG_COUNT" -eq 0 && -t 0 && -t 1 ]]; then
+  RUN_ONBOARD=true
+  INTERACTIVE_ONBOARD=true
+  info "Auto-launching interactive onboarding"
 fi
 
 REDCLAW_BIN=""

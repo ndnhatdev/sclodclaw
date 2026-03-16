@@ -32,13 +32,12 @@
     dead_code
 )]
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::{CommandFactory, Parser, Subcommand};
-use dialoguer::{Input, Password};
+use dialoguer::Input;
 use redclaw::cli_support::{parse_temperature, CompletionShell, EstopLevelArg};
-use serde::{Deserialize, Serialize};
 use std::io::Write;
-use tracing::{info, warn};
+use tracing::info;
 use tracing_subscriber::{fmt, EnvFilter};
 
 mod agent;
@@ -46,6 +45,7 @@ mod approval;
 mod auth;
 mod branding;
 mod channels;
+mod commands;
 mod rag {
     pub use redclaw::rag::*;
 }
@@ -211,7 +211,22 @@ Examples:
         host: Option<String>,
     },
 
-    /// Manage OS service lifecycle (launchd/systemd user service)
+    /// Manage OS service lifecycle (install/start/stop/status)
+    #[command(long_about = "\
+Manage the RedClaw background service lifecycle.
+
+Install, start, stop, restart, inspect, and uninstall the daemon service
+across supported init systems (systemd, OpenRC, launchd, Windows Task Scheduler).
+
+RedClaw names (`redclaw.service`, `com.redclaw.daemon`, `redclaw`) are the
+public contract. Legacy Redhorse service names remain compatibility aliases.
+
+Examples:
+  redclaw service install
+  redclaw service start
+  redclaw service status
+  redclaw service restart --service-init systemd
+  redclaw service uninstall --service-init openrc")]
     Service {
         /// Init system to use: auto (detect), systemd, or openrc
         #[arg(long, default_value = "auto", value_parser = ["auto", "systemd", "openrc"])]
@@ -227,7 +242,17 @@ Examples:
         doctor_command: Option<DoctorCommands>,
     },
 
-    /// Show system status (full details)
+    /// Show runtime and configuration status summary
+    #[command(long_about = "\
+Show runtime and configuration status.
+
+Prints the current workspace/config paths, provider/model selection,
+channel and gateway settings, memory backend, and daemon-related flags.
+
+Use `redclaw doctor` for deeper diagnostics and freshness checks.
+
+Examples:
+  redclaw status")]
     Status,
 
     /// Engage, inspect, and resume emergency-stop states.
@@ -289,7 +314,18 @@ Examples:
         model_command: ModelCommands,
     },
 
-    /// List supported AI providers
+    /// List supported providers and active selection
+    #[command(long_about = "\
+List supported AI providers and aliases.
+
+Shows provider IDs that can be used in config, marks the currently active
+default provider, and includes alias names where available.
+
+This is a read-only catalog command.
+
+Examples:
+  redclaw providers
+  redclaw onboard --interactive")]
     Providers,
 
     /// Manage channels (telegram, discord, slack)
@@ -312,7 +348,17 @@ Examples:
         channel_command: ChannelCommands,
     },
 
-    /// Browse 50+ integrations
+    /// Inspect integration readiness and setup hints (narrow, read-only)
+    #[command(long_about = "\
+Inspect one integration at a time.
+
+This command family is intentionally narrow today: `info <name>` provides
+status and setup hints for a known integration. There is currently no
+list/search subcommand in the `integrations` family.
+
+Examples:
+  redclaw integrations info Telegram
+  redclaw integrations info OpenRouter")]
     Integrations {
         #[command(subcommand)]
         integration_command: IntegrationCommands,
@@ -336,13 +382,13 @@ Examples:
         auth_command: AuthCommands,
     },
 
-    /// Discover and introspect USB hardware
+    /// Experimental hardware discovery surface (scaffolded)
     #[command(long_about = "\
-Discover and introspect USB hardware.
+Discover and inspect USB hardware (experimental scaffold).
 
-Enumerate connected USB devices, identify known development boards \
-(STM32 Nucleo, Arduino, ESP32), and retrieve chip information via \
-probe-rs / ST-Link.
+The command surface is exposed for discoverability, but this family is
+still scaffolded in the current cut and may return placeholder output
+instead of a full hardware workflow.
 
 Examples:
   redclaw hardware discover
@@ -353,13 +399,13 @@ Examples:
         hardware_command: redclaw::HardwareCommands,
     },
 
-    /// Manage hardware peripherals (STM32, RPi GPIO, etc.)
+    /// Experimental peripheral management surface (scaffolded)
     #[command(long_about = "\
-Manage hardware peripherals.
+Manage hardware peripherals (experimental scaffold).
 
-Add, list, flash, and configure hardware boards that expose tools \
-to the agent (GPIO, sensors, actuators). Supported boards: \
-nucleo-f401re, rpi-gpio, esp32, arduino-uno.
+The command surface is exposed for discoverability, but this family is
+still scaffolded in the current cut and may return placeholder output
+instead of a full peripheral workflow.
 
 Examples:
   redclaw peripheral list
@@ -372,13 +418,14 @@ Examples:
         peripheral_command: redclaw::PeripheralCommands,
     },
 
-    /// Manage agent memory (list, get, stats, clear)
+    /// Manage stored memory entries (list/get/stats/clear)
     #[command(long_about = "\
-Manage agent memory entries.
+Manage RedClaw memory entries.
 
-List, inspect, and clear memory entries stored by the agent. \
-Supports filtering by category and session, pagination, and \
-batch clearing with confirmation.
+Use this read/write utility surface to inspect saved memory, check backend
+health/statistics, and clear selected entries when needed.
+
+Supports filtering by category/session, pagination, and guarded clear flows.
 
 Examples:
   redclaw memory stats
@@ -391,16 +438,15 @@ Examples:
         memory_command: MemoryCommands,
     },
 
-    /// Manage configuration
+    /// Inspect exported configuration contract
     #[command(long_about = "\
-Manage RedClaw configuration.
+Inspect the RedClaw configuration contract.
 
-Inspect and export configuration settings. Use 'schema' to dump \
-the full JSON Schema for the config file, which documents every \
-available key, type, and default value.
+This command family is intentionally focused today: `schema` exports
+the full JSON Schema for `config.toml` (keys, types, and defaults).
 
 Examples:
-  redclaw config schema              # print JSON Schema to stdout
+  redclaw config schema
   redclaw config schema > schema.json")]
     Config {
         #[command(subcommand)]
@@ -651,13 +697,6 @@ enum MemoryCommands {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ManualHelpTarget {
     TopLevel,
-    Modules,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ManualModulesInvocation {
-    config_dir: Option<String>,
-    command: ModulesCommands,
 }
 
 fn maybe_handle_manual_help() -> Result<bool> {
@@ -671,187 +710,8 @@ fn maybe_handle_manual_help() -> Result<bool> {
     Ok(true)
 }
 
-fn maybe_handle_manual_modules_command() -> Result<bool> {
-    let args = std::env::args().collect::<Vec<_>>();
-    let Some(invocation) = parse_manual_modules_invocation(&args)? else {
-        return Ok(false);
-    };
-
-    if let Some(config_dir) = invocation.config_dir {
-        if config_dir.trim().is_empty() {
-            bail!("--config-dir cannot be empty");
-        }
-        std::env::set_var("REDCLAW_CONFIG_DIR", config_dir);
-    }
-
-    handle_modules_command(invocation.command)?;
-    Ok(true)
-}
-
-fn parse_manual_modules_invocation(args: &[String]) -> Result<Option<ManualModulesInvocation>> {
-    let mut index = 1;
-    let mut config_dir: Option<String> = None;
-
-    while index < args.len() {
-        let arg = args[index].as_str();
-        match arg {
-            "--config-dir" => {
-                let value = args
-                    .get(index + 1)
-                    .context("--config-dir requires a value")?;
-                config_dir = Some(value.clone());
-                index += 2;
-            }
-            value if value.starts_with("--config-dir=") => {
-                let value = value
-                    .split_once('=')
-                    .map_or_else(String::new, |(_, rhs)| rhs.to_string());
-                config_dir = Some(value);
-                index += 1;
-            }
-            "modules" => {
-                index += 1;
-                break;
-            }
-            "help" | "-h" | "--help" => return Ok(None),
-            value if value.starts_with('-') => return Ok(None),
-            _ => return Ok(None),
-        }
-    }
-
-    if index == 1 || args.get(index - 1).map(String::as_str) != Some("modules") {
-        return Ok(None);
-    }
-
-    let Some(subcommand) = args.get(index).map(String::as_str) else {
-        bail!(
-            "modules command requires a subcommand (list, info, install, remove, enable, disable, update, doctor)"
-        );
-    };
-    index += 1;
-
-    let command = match subcommand {
-        "list" => {
-            if index != args.len() {
-                bail!("modules list does not accept additional arguments");
-            }
-            ModulesCommands::List
-        }
-        "info" => {
-            let module_id = args
-                .get(index)
-                .cloned()
-                .context("modules info requires <module-id>")?;
-            index += 1;
-            if index != args.len() {
-                bail!("modules info accepts exactly one <module-id>");
-            }
-            ModulesCommands::Info { module_id }
-        }
-        "install" => {
-            let mut source: Option<String> = None;
-            let mut enable = false;
-
-            while index < args.len() {
-                let token = args[index].as_str();
-                match token {
-                    "--enable" => enable = true,
-                    value if value.starts_with('-') => {
-                        bail!("unsupported modules install option: {}", value);
-                    }
-                    value => {
-                        if source.is_some() {
-                            bail!("modules install accepts exactly one <source>");
-                        }
-                        source = Some(value.to_string());
-                    }
-                }
-                index += 1;
-            }
-
-            let source = source.context("modules install requires <source>")?;
-            ModulesCommands::Install { source, enable }
-        }
-        "remove" => {
-            let module_id = args
-                .get(index)
-                .cloned()
-                .context("modules remove requires <module-id>")?;
-            index += 1;
-            if index != args.len() {
-                bail!("modules remove accepts exactly one <module-id>");
-            }
-            ModulesCommands::Remove { module_id }
-        }
-        "enable" => {
-            let module_id = args
-                .get(index)
-                .cloned()
-                .context("modules enable requires <module-id>")?;
-            index += 1;
-            if index != args.len() {
-                bail!("modules enable accepts exactly one <module-id>");
-            }
-            ModulesCommands::Enable { module_id }
-        }
-        "disable" => {
-            let module_id = args
-                .get(index)
-                .cloned()
-                .context("modules disable requires <module-id>")?;
-            index += 1;
-            if index != args.len() {
-                bail!("modules disable accepts exactly one <module-id>");
-            }
-            ModulesCommands::Disable { module_id }
-        }
-        "update" => {
-            let mut module_id: Option<String> = None;
-            let mut all = false;
-
-            while index < args.len() {
-                let token = args[index].as_str();
-                match token {
-                    "--all" => all = true,
-                    value if value.starts_with('-') => {
-                        bail!("unsupported modules update option: {}", value);
-                    }
-                    value => {
-                        if module_id.is_some() {
-                            bail!("modules update accepts at most one <module-id>");
-                        }
-                        module_id = Some(value.to_string());
-                    }
-                }
-                index += 1;
-            }
-
-            if all && module_id.is_some() {
-                bail!("modules update does not accept <module-id> together with --all");
-            }
-            if !all && module_id.is_none() {
-                bail!("modules update requires <module-id> or --all");
-            }
-
-            ModulesCommands::Update { module_id, all }
-        }
-        "doctor" => {
-            if index != args.len() {
-                bail!("modules doctor does not accept additional arguments");
-            }
-            ModulesCommands::Doctor
-        }
-        _ => return Ok(None),
-    };
-
-    Ok(Some(ManualModulesInvocation {
-        config_dir,
-        command,
-    }))
-}
-
 fn detect_manual_help_target(args: &[String]) -> Option<ManualHelpTarget> {
-    let mut subcommand: Option<&str> = None;
+    let mut saw_subcommand = false;
     let mut index = 1;
 
     while index < args.len() {
@@ -864,25 +724,24 @@ fn detect_manual_help_target(args: &[String]) -> Option<ManualHelpTarget> {
                 index += 1;
             }
             "help" => {
-                let requested = args.get(index + 1).map(String::as_str).or(subcommand);
-                return Some(match requested {
-                    Some("modules") => ManualHelpTarget::Modules,
-                    _ => ManualHelpTarget::TopLevel,
-                });
+                return if saw_subcommand || args.get(index + 1).is_some() {
+                    None
+                } else {
+                    Some(ManualHelpTarget::TopLevel)
+                };
             }
             "-h" | "--help" => {
-                return Some(match subcommand {
-                    Some("modules") => ManualHelpTarget::Modules,
-                    _ => ManualHelpTarget::TopLevel,
-                });
+                return if saw_subcommand {
+                    None
+                } else {
+                    Some(ManualHelpTarget::TopLevel)
+                };
             }
             value if value.starts_with('-') => {
                 index += 1;
             }
-            value => {
-                if subcommand.is_none() {
-                    subcommand = Some(value);
-                }
+            _ => {
+                saw_subcommand = true;
                 index += 1;
             }
         }
@@ -894,7 +753,6 @@ fn detect_manual_help_target(args: &[String]) -> Option<ManualHelpTarget> {
 fn write_manual_help(target: ManualHelpTarget, mut out: impl Write) -> Result<()> {
     let text = match target {
         ManualHelpTarget::TopLevel => TOP_LEVEL_HELP,
-        ManualHelpTarget::Modules => MODULES_HELP,
     };
     out.write_all(text.as_bytes())
         .context("failed to write help output")?;
@@ -964,45 +822,10 @@ Options:
   -V, --version                  Print version
 ";
 
-const MODULES_HELP: &str = "\
-Manage installed modules.
-
-Usage: redclaw modules <COMMAND>
-
-Commands:
-  list                         List all installed modules
-  info <MODULE_ID>             Show details about a specific module
-  install <SOURCE> [--enable]  Install a module from local directory or archive
-  remove <MODULE_ID>           Remove an installed module
-  enable <MODULE_ID>           Enable an installed module
-  disable <MODULE_ID>          Disable an installed module
-  update [<MODULE_ID>] [--all] Update one module or all installed modules
-  doctor                       Run module health diagnostics
-
-Examples:
-  redclaw modules list
-  redclaw modules info provider-openai-compatible
-  redclaw modules install ./my-module
-  redclaw modules install ./my-module --enable
-  redclaw modules remove provider-openai-compatible
-  redclaw modules enable provider-openai-compatible
-  redclaw modules disable provider-openai-compatible
-  redclaw modules update provider-openai-compatible
-  redclaw modules update --all
-  redclaw modules doctor
-
-Options:
-  -h, --help  Print help
-";
-
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
     if maybe_handle_manual_help()? {
-        return Ok(());
-    }
-
-    if maybe_handle_manual_modules_command()? {
         return Ok(());
     }
 
@@ -1083,8 +906,7 @@ async fn main() -> Result<()> {
 
         // Handle --reinit: backup and reset configuration
         if reinit {
-            let (redclaw_dir, _) =
-                crate::config::schema::resolve_runtime_dirs_for_onboarding().await?;
+            let (redclaw_dir, _) = crate::config::schema::resolve_runtime_dirs_for_onboarding()?;
 
             if redclaw_dir.exists() {
                 let timestamp = chrono::Local::now().format("%Y%m%d%H%M%S");
@@ -1189,99 +1011,7 @@ async fn main() -> Result<()> {
         }
 
         Commands::Gateway { gateway_command } => {
-            match gateway_command {
-                Some(redclaw::GatewayCommands::Restart { port, host }) => {
-                    let (port, host) = resolve_gateway_addr(&config, port, host);
-                    let addr = format!("{host}:{port}");
-                    info!("🔄 Restarting RedClaw Gateway on {addr}");
-
-                    // Try to gracefully shutdown existing gateway via admin endpoint
-                    match shutdown_gateway(&host, port).await {
-                        Ok(()) => {
-                            info!("   ✓ Existing gateway on {addr} shut down gracefully");
-                            // Poll until the port is free (connection refused) or timeout
-                            let deadline =
-                                tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
-                            loop {
-                                match tokio::net::TcpStream::connect(&addr).await {
-                                    Err(_) => break, // port is free
-                                    Ok(_) if tokio::time::Instant::now() >= deadline => {
-                                        warn!(
-                                            "   Timed out waiting for port {port} to be released"
-                                        );
-                                        break;
-                                    }
-                                    Ok(_) => {
-                                        tokio::time::sleep(tokio::time::Duration::from_millis(50))
-                                            .await;
-                                    }
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            info!("   No existing gateway to shut down: {e}");
-                        }
-                    }
-
-                    log_gateway_start(&host, port);
-                    gateway::run_gateway(&host, port, config).await
-                }
-                Some(redclaw::GatewayCommands::GetPaircode { new }) => {
-                    let port = config.gateway.port;
-                    let host = &config.gateway.host;
-
-                    // Fetch live pairing code from running gateway
-                    // If --new is specified, generate a fresh pairing code
-                    match fetch_paircode(host, port, new).await {
-                        Ok(Some(code)) => {
-                            println!("🔐 Gateway pairing is enabled.");
-                            println!();
-                            println!("  ┌──────────────┐");
-                            println!("  │  {code}  │");
-                            println!("  └──────────────┘");
-                            println!();
-                            println!("  Use this one-time code to pair a new device:");
-                            println!("    POST /pair with header X-Pairing-Code: {code}");
-                        }
-                        Ok(None) => {
-                            if config.gateway.require_pairing {
-                                println!("🔐 Gateway pairing is enabled, but no active pairing code available.");
-                                println!("   The gateway may already be paired, or the code has been used.");
-                                println!("   Restart the gateway to generate a new pairing code.");
-                            } else {
-                                println!("⚠️  Gateway pairing is disabled in config.");
-                                println!(
-                                    "   All requests will be accepted without authentication."
-                                );
-                                println!(
-                                    "   To enable pairing, set [gateway] require_pairing = true"
-                                );
-                            }
-                        }
-                        Err(e) => {
-                            println!(
-                                "❌ Failed to fetch pairing code from gateway at {host}:{port}"
-                            );
-                            println!("   Error: {e}");
-                            println!();
-                            println!("   Is the gateway running? Start it with:");
-                            println!("     redclaw gateway start");
-                        }
-                    }
-                    Ok(())
-                }
-                Some(redclaw::GatewayCommands::Start { port, host }) => {
-                    let (port, host) = resolve_gateway_addr(&config, port, host);
-                    log_gateway_start(&host, port);
-                    gateway::run_gateway(&host, port, config).await
-                }
-                None => {
-                    let port = config.gateway.port;
-                    let host = config.gateway.host.clone();
-                    log_gateway_start(&host, port);
-                    gateway::run_gateway(&host, port, config).await
-                }
-            }
+            commands::gateway::handle_gateway_command(gateway_command, config).await
         }
 
         Commands::Daemon { port, host } => {
@@ -1503,7 +1233,9 @@ async fn main() -> Result<()> {
             memory::cli::handle_command(memory_command, &config).await
         }
 
-        Commands::Auth { auth_command } => handle_auth_command(auth_command, &config).await,
+        Commands::Auth { auth_command } => {
+            commands::auth::handle_auth_command(auth_command, &config).await
+        }
 
         Commands::Hardware { hardware_command } => {
             hardware::handle_command(hardware_command.clone(), &config)
@@ -1524,136 +1256,8 @@ async fn main() -> Result<()> {
             }
         },
 
-        Commands::Modules { modules_command } => handle_modules_command(modules_command),
-    }
-}
-
-/// Handle modules subcommands.
-fn handle_modules_command(command: ModulesCommands) -> Result<()> {
-    use crate::core::installer::ModuleInstaller;
-    use std::path::PathBuf;
-
-    let home_root = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .context("failed to get home directory")?;
-    let home_root = PathBuf::from(home_root).join(".redclaw");
-
-    let installer = ModuleInstaller::new(home_root);
-
-    match command {
-        ModulesCommands::List => {
-            let modules = installer.list()?;
-            if modules.is_empty() {
-                println!("No modules installed.");
-                return Ok(());
-            }
-
-            println!("{:<30} {:<15} {:<10}", "ID", "Version", "Enabled");
-            println!("{}", "-".repeat(60));
-            for module in modules {
-                println!(
-                    "{:<30} {:<15} {:<10}",
-                    module.id,
-                    module.version,
-                    if module.enabled { "yes" } else { "no" }
-                );
-            }
-            Ok(())
-        }
-
-        ModulesCommands::Info { module_id } => {
-            let info = installer.info(&module_id)?;
-            println!("Module: {}", info.id);
-            println!("  Version: {}", info.version);
-            println!("  Enabled: {}", if info.enabled { "yes" } else { "no" });
-            println!("  Trust: {:?}", info.trust.tier);
-            Ok(())
-        }
-
-        ModulesCommands::Install { source, enable } => {
-            println!("Installing module from: {}", source);
-            let module_id = installer.install(&source, enable)?;
-            println!("✓ Successfully installed module: {}", module_id);
-            if enable {
-                println!("  Module is enabled and will be activated on next boot.");
-            } else {
-                println!(
-                    "  Module is disabled. Use 'redclaw modules enable {}' to enable.",
-                    module_id
-                );
-            }
-            Ok(())
-        }
-
-        ModulesCommands::Remove { module_id } => {
-            println!("Removing module: {}", module_id);
-            installer.remove(&module_id)?;
-            println!("✓ Successfully removed module: {}", module_id);
-            Ok(())
-        }
-
-        ModulesCommands::Enable { module_id } => {
-            println!("Enabling module: {}", module_id);
-            let changed = installer.enable(&module_id)?;
-            if changed {
-                println!("✓ Successfully enabled module: {}", module_id);
-            } else {
-                println!("✓ Module '{}' is already enabled", module_id);
-            }
-            Ok(())
-        }
-
-        ModulesCommands::Disable { module_id } => {
-            println!("Disabling module: {}", module_id);
-            let changed = installer.disable(&module_id)?;
-            if changed {
-                println!("✓ Successfully disabled module: {}", module_id);
-            } else {
-                println!("✓ Module '{}' is already disabled", module_id);
-            }
-            Ok(())
-        }
-
-        ModulesCommands::Update { module_id, all } => {
-            if all {
-                println!("Updating all modules...");
-            } else if let Some(target) = module_id.as_deref() {
-                println!("Updating module: {}", target);
-            }
-
-            let results = installer.update(module_id.as_deref(), all)?;
-            if all {
-                if results.is_empty() {
-                    println!("No modules installed.");
-                } else {
-                    for result in &results {
-                        println!(
-                            "  Updated {}: {} -> {}",
-                            result.module_id, result.old_version, result.new_version
-                        );
-                    }
-                    println!("✓ Successfully updated {} module(s)", results.len());
-                }
-                return Ok(());
-            }
-
-            let result = results
-                .first()
-                .ok_or_else(|| anyhow!("update completed without any updated module"))?;
-            println!(
-                "✓ Successfully updated {}: {} -> {}",
-                result.module_id, result.old_version, result.new_version
-            );
-            Ok(())
-        }
-
-        ModulesCommands::Doctor => {
-            let report = installer.doctor()?;
-            println!("{}", report.render());
-            if report.has_errors() {
-                bail!("{} issue(s) found", report.error_count());
-            }
-            Ok(())
+        Commands::Modules { modules_command } => {
+            commands::modules::handle_modules_command(modules_command)
         }
     }
 }
@@ -1774,707 +1378,9 @@ fn write_shell_completion<W: Write>(shell: CompletionShell, writer: &mut W) -> R
     Ok(())
 }
 
-// ─── Gateway helper functions ───────────────────────────────────────────────
-
-/// Resolve gateway host and port from CLI args or config.
-fn resolve_gateway_addr(config: &Config, port: Option<u16>, host: Option<String>) -> (u16, String) {
-    let port = port.unwrap_or(config.gateway.port);
-    let host = host.unwrap_or_else(|| config.gateway.host.clone());
-    (port, host)
-}
-
-/// Log gateway startup message.
-fn log_gateway_start(host: &str, port: u16) {
-    if port == 0 {
-        info!("🚀 Starting RedClaw Gateway on {host} (random port)");
-    } else {
-        info!("🚀 Starting RedClaw Gateway on {host}:{port}");
-    }
-}
-
-/// Gracefully shutdown a running gateway via the admin endpoint.
-async fn shutdown_gateway(host: &str, port: u16) -> Result<()> {
-    let url = format!("http://{host}:{port}/admin/shutdown");
-    let client = reqwest::Client::new();
-
-    match client
-        .post(&url)
-        .timeout(std::time::Duration::from_secs(5))
-        .send()
-        .await
-    {
-        Ok(response) if response.status().is_success() => Ok(()),
-        Ok(response) => Err(anyhow::anyhow!(
-            "Gateway responded with status: {}",
-            response.status()
-        )),
-        Err(e) => Err(anyhow::anyhow!("Failed to connect to gateway: {e}")),
-    }
-}
-
-/// Fetch the current pairing code from a running gateway.
-/// If `new` is true, generates a fresh pairing code via POST request.
-async fn fetch_paircode(host: &str, port: u16, new: bool) -> Result<Option<String>> {
-    let client = reqwest::Client::new();
-
-    let response = if new {
-        // Generate a new pairing code via POST
-        let url = format!("http://{host}:{port}/admin/paircode/new");
-        client
-            .post(&url)
-            .timeout(std::time::Duration::from_secs(5))
-            .send()
-            .await
-    } else {
-        // Get existing pairing code via GET
-        let url = format!("http://{host}:{port}/admin/paircode");
-        client
-            .get(&url)
-            .timeout(std::time::Duration::from_secs(5))
-            .send()
-            .await
-    };
-
-    let response = response.map_err(|e| anyhow::anyhow!("Failed to connect to gateway: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(anyhow::anyhow!(
-            "Gateway responded with status: {}",
-            response.status()
-        ));
-    }
-
-    let json: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to parse response: {e}"))?;
-
-    if json.get("success").and_then(|v| v.as_bool()) != Some(true) {
-        return Ok(None);
-    }
-
-    Ok(json
-        .get("pairing_code")
-        .and_then(|v| v.as_str())
-        .map(String::from))
-}
-
-// ─── Generic Pending OAuth Login ────────────────────────────────────────────
-
-/// Generic pending OAuth login state, shared across providers.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct PendingOAuthLogin {
-    provider: String,
-    profile: String,
-    code_verifier: String,
-    state: String,
-    created_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct PendingOAuthLoginFile {
-    #[serde(default)]
-    provider: Option<String>,
-    profile: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    code_verifier: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    encrypted_code_verifier: Option<String>,
-    state: String,
-    created_at: String,
-}
-
-fn pending_oauth_login_path(config: &Config, provider: &str) -> std::path::PathBuf {
-    let filename = format!("auth-{}-pending.json", provider);
-    auth::state_dir_from_config(config).join(filename)
-}
-
-fn pending_oauth_secret_store(config: &Config) -> security::secrets::SecretStore {
-    security::secrets::SecretStore::new(
-        &auth::state_dir_from_config(config),
-        config.secrets.encrypt,
-    )
-}
-
-#[cfg(unix)]
-fn set_owner_only_permissions(path: &std::path::Path) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
-    Ok(())
-}
-
-#[cfg(not(unix))]
-fn set_owner_only_permissions(_path: &std::path::Path) -> Result<()> {
-    Ok(())
-}
-
-fn save_pending_oauth_login(config: &Config, pending: &PendingOAuthLogin) -> Result<()> {
-    let path = pending_oauth_login_path(config, &pending.provider);
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    let secret_store = pending_oauth_secret_store(config);
-    let encrypted_code_verifier = secret_store.encrypt(&pending.code_verifier)?;
-    let persisted = PendingOAuthLoginFile {
-        provider: Some(pending.provider.clone()),
-        profile: pending.profile.clone(),
-        code_verifier: None,
-        encrypted_code_verifier: Some(encrypted_code_verifier),
-        state: pending.state.clone(),
-        created_at: pending.created_at.clone(),
-    };
-    let tmp = path.with_extension(format!(
-        "tmp.{}.{}",
-        std::process::id(),
-        chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
-    ));
-    let json = serde_json::to_vec_pretty(&persisted)?;
-    std::fs::write(&tmp, json)?;
-    set_owner_only_permissions(&tmp)?;
-    std::fs::rename(tmp, &path)?;
-    set_owner_only_permissions(&path)?;
-    Ok(())
-}
-
-fn load_pending_oauth_login(config: &Config, provider: &str) -> Result<Option<PendingOAuthLogin>> {
-    let path = pending_oauth_login_path(config, provider);
-    if !path.exists() {
-        return Ok(None);
-    }
-    let bytes = std::fs::read(&path)?;
-    if bytes.is_empty() {
-        return Ok(None);
-    }
-    let persisted: PendingOAuthLoginFile = serde_json::from_slice(&bytes)?;
-    let secret_store = pending_oauth_secret_store(config);
-    let code_verifier = if let Some(encrypted) = persisted.encrypted_code_verifier {
-        secret_store.decrypt(&encrypted)?
-    } else if let Some(plaintext) = persisted.code_verifier {
-        plaintext
-    } else {
-        bail!("Pending {} login is missing code verifier", provider);
-    };
-    Ok(Some(PendingOAuthLogin {
-        provider: persisted.provider.unwrap_or_else(|| provider.to_string()),
-        profile: persisted.profile,
-        code_verifier,
-        state: persisted.state,
-        created_at: persisted.created_at,
-    }))
-}
-
-fn clear_pending_oauth_login(config: &Config, provider: &str) {
-    let path = pending_oauth_login_path(config, provider);
-    if let Ok(file) = std::fs::OpenOptions::new().write(true).open(&path) {
-        let _ = file.set_len(0);
-        let _ = file.sync_all();
-    }
-    let _ = std::fs::remove_file(path);
-}
-
-fn read_auth_input(prompt: &str) -> Result<String> {
-    let input = Password::new()
-        .with_prompt(prompt)
-        .allow_empty_password(false)
-        .interact()?;
-    Ok(input.trim().to_string())
-}
-
 fn read_plain_input(prompt: &str) -> Result<String> {
     let input: String = Input::new().with_prompt(prompt).interact_text()?;
     Ok(input.trim().to_string())
-}
-
-fn extract_openai_account_id_for_profile(access_token: &str) -> Option<String> {
-    let account_id = auth::openai_oauth::extract_account_id_from_jwt(access_token);
-    if account_id.is_none() {
-        warn!(
-            "Could not extract OpenAI account id from OAuth access token; \
-             requests may fail until re-authentication."
-        );
-    }
-    account_id
-}
-
-fn format_expiry(profile: &auth::profiles::AuthProfile) -> String {
-    match profile
-        .token_set
-        .as_ref()
-        .and_then(|token_set| token_set.expires_at)
-    {
-        Some(ts) => {
-            let now = chrono::Utc::now();
-            if ts <= now {
-                format!("expired at {}", ts.to_rfc3339())
-            } else {
-                let mins = (ts - now).num_minutes();
-                format!("expires in {mins}m ({})", ts.to_rfc3339())
-            }
-        }
-        None => "n/a".to_string(),
-    }
-}
-
-#[allow(clippy::too_many_lines)]
-async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> Result<()> {
-    let auth_service = auth::AuthService::from_config(config);
-
-    match auth_command {
-        AuthCommands::Login {
-            provider,
-            profile,
-            device_code,
-        } => {
-            let provider = auth::normalize_provider(&provider)?;
-            let client = reqwest::Client::new();
-
-            match provider.as_str() {
-                "gemini" => {
-                    // Gemini OAuth flow
-                    if device_code {
-                        match auth::gemini_oauth::start_device_code_flow(&client).await {
-                            Ok(device) => {
-                                println!("Google/Gemini device-code login started.");
-                                println!("Visit: {}", device.verification_uri);
-                                println!("Code:  {}", device.user_code);
-                                if let Some(uri_complete) = &device.verification_uri_complete {
-                                    println!("Fast link: {uri_complete}");
-                                }
-
-                                let token_set =
-                                    auth::gemini_oauth::poll_device_code_tokens(&client, &device)
-                                        .await?;
-                                let account_id = token_set.id_token.as_deref().and_then(
-                                    auth::gemini_oauth::extract_account_email_from_id_token,
-                                );
-
-                                auth_service
-                                    .store_gemini_tokens(&profile, token_set, account_id, true)
-                                    .await?;
-
-                                println!("Saved profile {profile}");
-                                println!("Active profile for gemini: {profile}");
-                                return Ok(());
-                            }
-                            Err(e) => {
-                                println!(
-                                    "Device-code flow unavailable: {e}. Falling back to browser flow."
-                                );
-                            }
-                        }
-                    }
-
-                    let pkce = auth::gemini_oauth::generate_pkce_state();
-                    let authorize_url = auth::gemini_oauth::build_authorize_url(&pkce)?;
-
-                    // Save pending login for paste-redirect fallback
-                    let pending = PendingOAuthLogin {
-                        provider: "gemini".to_string(),
-                        profile: profile.clone(),
-                        code_verifier: pkce.code_verifier.clone(),
-                        state: pkce.state.clone(),
-                        created_at: chrono::Utc::now().to_rfc3339(),
-                    };
-                    save_pending_oauth_login(config, &pending)?;
-
-                    println!("Open this URL in your browser and authorize access:");
-                    println!("{authorize_url}");
-                    println!();
-
-                    let code = match auth::gemini_oauth::receive_loopback_code(
-                        &pkce.state,
-                        std::time::Duration::from_secs(180),
-                    )
-                    .await
-                    {
-                        Ok(code) => {
-                            clear_pending_oauth_login(config, "gemini");
-                            code
-                        }
-                        Err(e) => {
-                            println!("Callback capture failed: {e}");
-                            println!(
-                                "Run `redclaw auth paste-redirect --provider gemini --profile {profile}`"
-                            );
-                            return Ok(());
-                        }
-                    };
-
-                    let token_set =
-                        auth::gemini_oauth::exchange_code_for_tokens(&client, &code, &pkce).await?;
-                    let account_id = token_set
-                        .id_token
-                        .as_deref()
-                        .and_then(auth::gemini_oauth::extract_account_email_from_id_token);
-
-                    auth_service
-                        .store_gemini_tokens(&profile, token_set, account_id, true)
-                        .await?;
-
-                    println!("Saved profile {profile}");
-                    println!("Active profile for gemini: {profile}");
-                    Ok(())
-                }
-                "openai-codex" => {
-                    // OpenAI Codex OAuth flow
-                    if device_code {
-                        match auth::openai_oauth::start_device_code_flow(&client).await {
-                            Ok(device) => {
-                                println!("OpenAI device-code login started.");
-                                println!("Visit: {}", device.verification_uri);
-                                println!("Code:  {}", device.user_code);
-                                if let Some(uri_complete) = &device.verification_uri_complete {
-                                    println!("Fast link: {uri_complete}");
-                                }
-                                if let Some(message) = &device.message {
-                                    println!("{message}");
-                                }
-
-                                let token_set =
-                                    auth::openai_oauth::poll_device_code_tokens(&client, &device)
-                                        .await?;
-                                let account_id =
-                                    extract_openai_account_id_for_profile(&token_set.access_token);
-
-                                auth_service
-                                    .store_openai_tokens(&profile, token_set, account_id, true)
-                                    .await?;
-                                clear_pending_oauth_login(config, "openai");
-
-                                println!("Saved profile {profile}");
-                                println!("Active profile for openai-codex: {profile}");
-                                return Ok(());
-                            }
-                            Err(e) => {
-                                println!(
-                                    "Device-code flow unavailable: {e}. Falling back to browser/paste flow."
-                                );
-                            }
-                        }
-                    }
-
-                    let pkce = auth::openai_oauth::generate_pkce_state();
-                    let pending = PendingOAuthLogin {
-                        provider: "openai".to_string(),
-                        profile: profile.clone(),
-                        code_verifier: pkce.code_verifier.clone(),
-                        state: pkce.state.clone(),
-                        created_at: chrono::Utc::now().to_rfc3339(),
-                    };
-                    save_pending_oauth_login(config, &pending)?;
-
-                    let authorize_url = auth::openai_oauth::build_authorize_url(&pkce);
-                    println!("Open this URL in your browser and authorize access:");
-                    println!("{authorize_url}");
-                    println!();
-                    println!("Waiting for callback at http://localhost:1455/auth/callback ...");
-
-                    let code = match auth::openai_oauth::receive_loopback_code(
-                        &pkce.state,
-                        std::time::Duration::from_secs(180),
-                    )
-                    .await
-                    {
-                        Ok(code) => code,
-                        Err(e) => {
-                            println!("Callback capture failed: {e}");
-                            println!(
-                                "Run `redclaw auth paste-redirect --provider openai-codex --profile {profile}`"
-                            );
-                            return Ok(());
-                        }
-                    };
-
-                    let token_set =
-                        auth::openai_oauth::exchange_code_for_tokens(&client, &code, &pkce).await?;
-                    let account_id = extract_openai_account_id_for_profile(&token_set.access_token);
-
-                    auth_service
-                        .store_openai_tokens(&profile, token_set, account_id, true)
-                        .await?;
-                    clear_pending_oauth_login(config, "openai");
-
-                    println!("Saved profile {profile}");
-                    println!("Active profile for openai-codex: {profile}");
-                    Ok(())
-                }
-                _ => {
-                    bail!(
-                        "`auth login` supports --provider openai-codex or gemini, got: {provider}"
-                    );
-                }
-            }
-        }
-
-        AuthCommands::PasteRedirect {
-            provider,
-            profile,
-            input,
-        } => {
-            let provider = auth::normalize_provider(&provider)?;
-
-            match provider.as_str() {
-                "openai-codex" => {
-                    let pending = load_pending_oauth_login(config, "openai")?.ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "No pending OpenAI login found. Run `redclaw auth login --provider openai-codex` first."
-                        )
-                    })?;
-
-                    if pending.profile != profile {
-                        bail!(
-                            "Pending login profile mismatch: pending={}, requested={}",
-                            pending.profile,
-                            profile
-                        );
-                    }
-
-                    let redirect_input = match input {
-                        Some(value) => value,
-                        None => read_plain_input("Paste redirect URL or OAuth code")?,
-                    };
-
-                    let code = auth::openai_oauth::parse_code_from_redirect(
-                        &redirect_input,
-                        Some(&pending.state),
-                    )?;
-
-                    let pkce = auth::openai_oauth::PkceState {
-                        code_verifier: pending.code_verifier.clone(),
-                        code_challenge: String::new(),
-                        state: pending.state.clone(),
-                    };
-
-                    let client = reqwest::Client::new();
-                    let token_set =
-                        auth::openai_oauth::exchange_code_for_tokens(&client, &code, &pkce).await?;
-                    let account_id = extract_openai_account_id_for_profile(&token_set.access_token);
-
-                    auth_service
-                        .store_openai_tokens(&profile, token_set, account_id, true)
-                        .await?;
-                    clear_pending_oauth_login(config, "openai");
-
-                    println!("Saved profile {profile}");
-                    println!("Active profile for openai-codex: {profile}");
-                }
-                "gemini" => {
-                    let pending = load_pending_oauth_login(config, "gemini")?.ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "No pending Gemini login found. Run `redclaw auth login --provider gemini` first."
-                        )
-                    })?;
-
-                    if pending.profile != profile {
-                        bail!(
-                            "Pending login profile mismatch: pending={}, requested={}",
-                            pending.profile,
-                            profile
-                        );
-                    }
-
-                    let redirect_input = match input {
-                        Some(value) => value,
-                        None => read_plain_input("Paste redirect URL or OAuth code")?,
-                    };
-
-                    let code = auth::gemini_oauth::parse_code_from_redirect(
-                        &redirect_input,
-                        Some(&pending.state),
-                    )?;
-
-                    let pkce = auth::gemini_oauth::PkceState {
-                        code_verifier: pending.code_verifier.clone(),
-                        code_challenge: String::new(),
-                        state: pending.state.clone(),
-                    };
-
-                    let client = reqwest::Client::new();
-                    let token_set =
-                        auth::gemini_oauth::exchange_code_for_tokens(&client, &code, &pkce).await?;
-                    let account_id = token_set
-                        .id_token
-                        .as_deref()
-                        .and_then(auth::gemini_oauth::extract_account_email_from_id_token);
-
-                    auth_service
-                        .store_gemini_tokens(&profile, token_set, account_id, true)
-                        .await?;
-                    clear_pending_oauth_login(config, "gemini");
-
-                    println!("Saved profile {profile}");
-                    println!("Active profile for gemini: {profile}");
-                }
-                _ => {
-                    bail!("`auth paste-redirect` supports --provider openai-codex or gemini");
-                }
-            }
-            Ok(())
-        }
-
-        AuthCommands::PasteToken {
-            provider,
-            profile,
-            token,
-            auth_kind,
-        } => {
-            let provider = auth::normalize_provider(&provider)?;
-            let token = match token {
-                Some(token) => token.trim().to_string(),
-                None => read_auth_input("Paste token")?,
-            };
-            if token.is_empty() {
-                bail!("Token cannot be empty");
-            }
-
-            let kind = auth::anthropic_token::detect_auth_kind(&token, auth_kind.as_deref());
-            let mut metadata = std::collections::HashMap::new();
-            metadata.insert(
-                "auth_kind".to_string(),
-                kind.as_metadata_value().to_string(),
-            );
-
-            auth_service
-                .store_provider_token(&provider, &profile, &token, metadata, true)
-                .await?;
-            println!("Saved profile {profile}");
-            println!("Active profile for {provider}: {profile}");
-            Ok(())
-        }
-
-        AuthCommands::SetupToken { provider, profile } => {
-            let provider = auth::normalize_provider(&provider)?;
-            let token = read_auth_input("Paste token")?;
-            if token.is_empty() {
-                bail!("Token cannot be empty");
-            }
-
-            let kind = auth::anthropic_token::detect_auth_kind(&token, Some("authorization"));
-            let mut metadata = std::collections::HashMap::new();
-            metadata.insert(
-                "auth_kind".to_string(),
-                kind.as_metadata_value().to_string(),
-            );
-
-            auth_service
-                .store_provider_token(&provider, &profile, &token, metadata, true)
-                .await?;
-            println!("Saved profile {profile}");
-            println!("Active profile for {provider}: {profile}");
-            Ok(())
-        }
-
-        AuthCommands::Refresh { provider, profile } => {
-            let provider = auth::normalize_provider(&provider)?;
-
-            match provider.as_str() {
-                "openai-codex" => {
-                    match auth_service
-                        .get_valid_openai_access_token(profile.as_deref())
-                        .await?
-                    {
-                        Some(_) => {
-                            println!("OpenAI Codex token is valid (refresh completed if needed).");
-                            Ok(())
-                        }
-                        None => {
-                            bail!(
-                                "No OpenAI Codex auth profile found. Run `redclaw auth login --provider openai-codex`."
-                            )
-                        }
-                    }
-                }
-                "gemini" => {
-                    match auth_service
-                        .get_valid_gemini_access_token(profile.as_deref())
-                        .await?
-                    {
-                        Some(_) => {
-                            let profile_name = profile.as_deref().unwrap_or("default");
-                            println!("✓ Gemini token refreshed successfully");
-                            println!("  Profile: gemini:{}", profile_name);
-                            Ok(())
-                        }
-                        None => {
-                            bail!(
-                                "No Gemini auth profile found. Run `redclaw auth login --provider gemini`."
-                            )
-                        }
-                    }
-                }
-                _ => bail!("`auth refresh` supports --provider openai-codex or gemini"),
-            }
-        }
-
-        AuthCommands::Logout { provider, profile } => {
-            let provider = auth::normalize_provider(&provider)?;
-            let removed = auth_service.remove_profile(&provider, &profile).await?;
-            if removed {
-                println!("Removed auth profile {provider}:{profile}");
-            } else {
-                println!("Auth profile not found: {provider}:{profile}");
-            }
-            Ok(())
-        }
-
-        AuthCommands::Use { provider, profile } => {
-            let provider = auth::normalize_provider(&provider)?;
-            auth_service.set_active_profile(&provider, &profile).await?;
-            println!("Active profile for {provider}: {profile}");
-            Ok(())
-        }
-
-        AuthCommands::List => {
-            let data = auth_service.load_profiles().await?;
-            if data.profiles.is_empty() {
-                println!("No auth profiles configured.");
-                return Ok(());
-            }
-
-            for (id, profile) in &data.profiles {
-                let active = data
-                    .active_profiles
-                    .get(&profile.provider)
-                    .is_some_and(|active_id| active_id == id);
-                let marker = if active { "*" } else { " " };
-                println!("{marker} {id}");
-            }
-
-            Ok(())
-        }
-
-        AuthCommands::Status => {
-            let data = auth_service.load_profiles().await?;
-            if data.profiles.is_empty() {
-                println!("No auth profiles configured.");
-                return Ok(());
-            }
-
-            for (id, profile) in &data.profiles {
-                let active = data
-                    .active_profiles
-                    .get(&profile.provider)
-                    .is_some_and(|active_id| active_id == id);
-                let marker = if active { "*" } else { " " };
-                println!(
-                    "{} {} kind={:?} account={} expires={}",
-                    marker,
-                    id,
-                    profile.kind,
-                    crate::security::redact(profile.account_id.as_deref().unwrap_or("unknown")),
-                    format_expiry(profile)
-                );
-            }
-
-            println!();
-            println!("Active profiles:");
-            for (provider, profile_id) in &data.active_profiles {
-                println!("  {provider}: {profile_id}");
-            }
-
-            Ok(())
-        }
-    }
 }
 
 /// Bootstrap lifecycle host - discovers and activates modules
@@ -2615,167 +1521,13 @@ mod tests {
     }
 
     #[test]
-    fn manual_modules_help_is_detected() {
+    fn manual_modules_help_is_not_intercepted() {
         let args = vec![
             "redclaw".to_string(),
             "modules".to_string(),
             "--help".to_string(),
         ];
-        assert_eq!(
-            detect_manual_help_target(&args),
-            Some(ManualHelpTarget::Modules)
-        );
-    }
-
-    #[test]
-    fn manual_modules_help_mentions_install_and_remove() {
-        let mut output = Vec::new();
-        write_manual_help(ManualHelpTarget::Modules, &mut output)
-            .expect("manual help generation should succeed");
-        let help = String::from_utf8(output).expect("manual help should be utf-8");
-
-        assert!(help.contains("redclaw modules install ./my-module"));
-        assert!(help.contains("remove <MODULE_ID>"));
-        assert!(help.contains("enable <MODULE_ID>"));
-        assert!(help.contains("disable <MODULE_ID>"));
-        assert!(help.contains("redclaw modules update --all"));
-        assert!(help.contains("doctor"));
-    }
-
-    #[test]
-    fn manual_modules_invocation_parses_install_enable() {
-        let args = vec![
-            "redclaw".to_string(),
-            "modules".to_string(),
-            "install".to_string(),
-            "./my-module".to_string(),
-            "--enable".to_string(),
-        ];
-
-        let invocation = parse_manual_modules_invocation(&args)
-            .expect("parse should succeed")
-            .expect("modules invocation should be detected");
-
-        assert_eq!(invocation.config_dir, None);
-        assert_eq!(
-            invocation.command,
-            ModulesCommands::Install {
-                source: "./my-module".to_string(),
-                enable: true
-            }
-        );
-    }
-
-    #[test]
-    fn manual_modules_invocation_parses_config_dir_and_list() {
-        let args = vec![
-            "redclaw".to_string(),
-            "--config-dir".to_string(),
-            "./tmp-config".to_string(),
-            "modules".to_string(),
-            "list".to_string(),
-        ];
-
-        let invocation = parse_manual_modules_invocation(&args)
-            .expect("parse should succeed")
-            .expect("modules invocation should be detected");
-
-        assert_eq!(invocation.config_dir.as_deref(), Some("./tmp-config"));
-        assert_eq!(invocation.command, ModulesCommands::List);
-    }
-
-    #[test]
-    fn manual_modules_invocation_parses_enable() {
-        let args = vec![
-            "redclaw".to_string(),
-            "modules".to_string(),
-            "enable".to_string(),
-            "provider-openai-compatible".to_string(),
-        ];
-
-        let invocation = parse_manual_modules_invocation(&args)
-            .expect("parse should succeed")
-            .expect("modules invocation should be detected");
-
-        assert_eq!(
-            invocation.command,
-            ModulesCommands::Enable {
-                module_id: "provider-openai-compatible".to_string(),
-            }
-        );
-    }
-
-    #[test]
-    fn manual_modules_invocation_parses_disable() {
-        let args = vec![
-            "redclaw".to_string(),
-            "modules".to_string(),
-            "disable".to_string(),
-            "provider-openai-compatible".to_string(),
-        ];
-
-        let invocation = parse_manual_modules_invocation(&args)
-            .expect("parse should succeed")
-            .expect("modules invocation should be detected");
-
-        assert_eq!(
-            invocation.command,
-            ModulesCommands::Disable {
-                module_id: "provider-openai-compatible".to_string(),
-            }
-        );
-    }
-
-    #[test]
-    fn manual_modules_invocation_requires_install_source() {
-        let args = vec![
-            "redclaw".to_string(),
-            "modules".to_string(),
-            "install".to_string(),
-        ];
-
-        let error =
-            parse_manual_modules_invocation(&args).expect_err("missing source should fail parsing");
-        assert!(error
-            .to_string()
-            .contains("modules install requires <source>"));
-    }
-
-    #[test]
-    fn manual_modules_invocation_parses_update_all() {
-        let args = vec![
-            "redclaw".to_string(),
-            "modules".to_string(),
-            "update".to_string(),
-            "--all".to_string(),
-        ];
-
-        let invocation = parse_manual_modules_invocation(&args)
-            .expect("parse should succeed")
-            .expect("modules invocation should be detected");
-
-        assert_eq!(
-            invocation.command,
-            ModulesCommands::Update {
-                module_id: None,
-                all: true,
-            }
-        );
-    }
-
-    #[test]
-    fn manual_modules_invocation_parses_doctor() {
-        let args = vec![
-            "redclaw".to_string(),
-            "modules".to_string(),
-            "doctor".to_string(),
-        ];
-
-        let invocation = parse_manual_modules_invocation(&args)
-            .expect("parse should succeed")
-            .expect("modules invocation should be detected");
-
-        assert_eq!(invocation.command, ModulesCommands::Doctor);
+        assert_eq!(detect_manual_help_target(&args), None);
     }
 
     #[test]

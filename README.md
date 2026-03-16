@@ -89,13 +89,13 @@ Built by students and members of the Harvard, MIT, and Sundai.Club communities.
 Fastest install after the repo is pushed if Rust is already installed:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/single-owner-history-clean/install.sh | bash
 ```
 
 One-command install with system deps + Rust bootstrap on Linux/macOS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/main/install.sh | bash -s -- --install-system-deps --install-rust
+curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/single-owner-history-clean/install.sh | bash -s -- --install-system-deps --install-rust
 ```
 
 Notes:
@@ -107,7 +107,7 @@ Notes:
 Quick onboarding right after install:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/main/install.sh | bash -s -- --onboard --api-key "sk-..." --provider openrouter
+curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/single-owner-history-clean/install.sh | bash -s -- --onboard --api-key "sk-..." --provider openrouter
 ```
 
 ### 📢 Announcements
@@ -234,7 +234,7 @@ Example sample (macOS arm64, measured on February 18, 2026):
 Or skip the steps above and install everything (system deps, Rust, RedClaw) in a single command:
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/ndnhatdev/sclodclaw/main/install.sh | bash
+curl -LsSf https://raw.githubusercontent.com/ndnhatdev/sclodclaw/single-owner-history-clean/install.sh | bash
 ```
 
 #### Compilation resource requirements
@@ -307,7 +307,7 @@ REDCLAW_CONTAINER_CLI=podman ./install.sh --docker
 Remote one-liner (review first in security-sensitive environments):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/single-owner-history-clean/install.sh | bash
 ```
 
 Details: [`docs/setup-guides/one-click-bootstrap.md`](docs/setup-guides/one-click-bootstrap.md) (toolchain mode may request `sudo` for system packages).
