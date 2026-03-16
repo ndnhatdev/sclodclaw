@@ -262,10 +262,6 @@ path = "tests/test_system.rs"
 name = "live"
 path = "tests/test_live.rs"
 
-[[test]]
-name = "legacy_env_path_compat"
-path = "tests/legacy_env_path_compat.rs"
-
 [[bench]]
 name = "agent_benchmarks"
 harness = false

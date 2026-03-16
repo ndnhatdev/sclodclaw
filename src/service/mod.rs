@@ -5,8 +5,20 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 
-const SERVICE_LABEL: &str = "com.redhorse.daemon";
-const WINDOWS_TASK_NAME: &str = "Redhorse Daemon";
+const SERVICE_LABEL: &str = "com.redclaw.daemon";
+const LEGACY_SERVICE_LABEL: &str = "com.redhorse.daemon";
+const WINDOWS_TASK_NAME: &str = "RedClaw Daemon";
+const LEGACY_WINDOWS_TASK_NAME: &str = "Redhorse Daemon";
+const SERVICE_DISPLAY_NAME: &str = "RedClaw daemon";
+const SYSTEMD_UNIT_NAME: &str = "redclaw.service";
+const LEGACY_SYSTEMD_UNIT_NAME: &str = "redhorse.service";
+const OPENRC_SERVICE_NAME: &str = "redclaw";
+const LEGACY_OPENRC_SERVICE_NAME: &str = "redhorse";
+const OPENRC_CONFIG_DIR: &str = "/etc/redclaw";
+const LEGACY_OPENRC_CONFIG_DIR: &str = "/etc/redhorse";
+const OPENRC_LOG_DIR: &str = "/var/log/redclaw";
+const WINDOWS_WRAPPER_NAME: &str = "redclaw-daemon.cmd";
+const LEGACY_WINDOWS_WRAPPER_NAME: &str = "redhorse-daemon.cmd";
 
 /// Supported init systems for service management
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -89,6 +101,10 @@ fn windows_task_name() -> &'static str {
     WINDOWS_TASK_NAME
 }
 
+fn legacy_windows_task_name() -> &'static str {
+    LEGACY_WINDOWS_TASK_NAME
+}
+
 pub fn handle_command(
     command: &crate::ServiceCommands,
     config: &Config,
@@ -121,16 +137,30 @@ fn start(config: &Config, init_system: InitSystem) -> Result<()> {
     if cfg!(target_os = "macos") {
         let plist = macos_service_file()?;
         run_checked(Command::new("launchctl").arg("load").arg("-w").arg(&plist))?;
-        run_checked(Command::new("launchctl").arg("start").arg(SERVICE_LABEL))?;
-        println!("✅ Service started");
+        if let Err(primary_err) =
+            run_checked(Command::new("launchctl").arg("start").arg(SERVICE_LABEL))
+        {
+            run_checked(
+                Command::new("launchctl")
+                    .arg("start")
+                    .arg(LEGACY_SERVICE_LABEL),
+            )
+            .or(Err(primary_err))?;
+        }
+        println!("✅ {SERVICE_DISPLAY_NAME} started");
         Ok(())
     } else if cfg!(target_os = "linux") {
         let resolved = init_system.resolve()?;
         start_linux(resolved)
     } else if cfg!(target_os = "windows") {
         let _ = config;
-        run_checked(Command::new("schtasks").args(["/Run", "/TN", windows_task_name()]))?;
-        println!("✅ Service started");
+        if let Err(primary_err) =
+            run_checked(Command::new("schtasks").args(["/Run", "/TN", windows_task_name()]))
+        {
+            run_checked(Command::new("schtasks").args(["/Run", "/TN", legacy_windows_task_name()]))
+                .or(Err(primary_err))?;
+        }
+        println!("✅ {SERVICE_DISPLAY_NAME} started");
         Ok(())
     } else {
         let _ = config;
@@ -142,14 +172,14 @@ fn start_linux(init_system: InitSystem) -> Result<()> {
     match init_system {
         InitSystem::Systemd => {
             run_checked(Command::new("systemctl").args(["--user", "daemon-reload"]))?;
-            run_checked(Command::new("systemctl").args(["--user", "start", "redhorse.service"]))?;
+            run_systemd_action("start")?;
         }
         InitSystem::Openrc => {
-            run_checked(Command::new("rc-service").args(["redhorse", "start"]))?;
+            run_openrc_action("start")?;
         }
         InitSystem::Auto => unreachable!("Auto should be resolved before this point"),
     }
-    println!("✅ Service started");
+    println!("✅ {SERVICE_DISPLAY_NAME} started");
     Ok(())
 }
 
@@ -159,20 +189,33 @@ fn stop(config: &Config, init_system: InitSystem) -> Result<()> {
         let _ = run_checked(Command::new("launchctl").arg("stop").arg(SERVICE_LABEL));
         let _ = run_checked(
             Command::new("launchctl")
+                .arg("stop")
+                .arg(LEGACY_SERVICE_LABEL),
+        );
+        let _ = run_checked(
+            Command::new("launchctl")
                 .arg("unload")
                 .arg("-w")
                 .arg(&plist),
         );
-        println!("✅ Service stopped");
+        let legacy_plist = legacy_macos_service_file()?;
+        let _ = run_checked(
+            Command::new("launchctl")
+                .arg("unload")
+                .arg("-w")
+                .arg(&legacy_plist),
+        );
+        println!("✅ {SERVICE_DISPLAY_NAME} stopped");
         Ok(())
     } else if cfg!(target_os = "linux") {
         let resolved = init_system.resolve()?;
         stop_linux(resolved)
     } else if cfg!(target_os = "windows") {
         let _ = config;
-        let task_name = windows_task_name();
-        let _ = run_checked(Command::new("schtasks").args(["/End", "/TN", task_name]));
-        println!("✅ Service stopped");
+        let _ = run_checked(Command::new("schtasks").args(["/End", "/TN", windows_task_name()]));
+        let _ =
+            run_checked(Command::new("schtasks").args(["/End", "/TN", legacy_windows_task_name()]));
+        println!("✅ {SERVICE_DISPLAY_NAME} stopped");
         Ok(())
     } else {
         let _ = config;
@@ -183,15 +226,14 @@ fn stop(config: &Config, init_system: InitSystem) -> Result<()> {
 fn stop_linux(init_system: InitSystem) -> Result<()> {
     match init_system {
         InitSystem::Systemd => {
-            let _ =
-                run_checked(Command::new("systemctl").args(["--user", "stop", "redhorse.service"]));
+            let _ = run_systemd_action("stop");
         }
         InitSystem::Openrc => {
-            let _ = run_checked(Command::new("rc-service").args(["redhorse", "stop"]));
+            let _ = run_openrc_action("stop");
         }
         InitSystem::Auto => unreachable!("Auto should be resolved before this point"),
     }
-    println!("✅ Service stopped");
+    println!("✅ {SERVICE_DISPLAY_NAME} stopped");
     Ok(())
 }
 
@@ -199,7 +241,7 @@ fn restart(config: &Config, init_system: InitSystem) -> Result<()> {
     if cfg!(target_os = "macos") {
         stop(config, init_system)?;
         start(config, init_system)?;
-        println!("✅ Service restarted");
+        println!("✅ {SERVICE_DISPLAY_NAME} restarted");
         return Ok(());
     }
 
@@ -211,7 +253,7 @@ fn restart(config: &Config, init_system: InitSystem) -> Result<()> {
     if cfg!(target_os = "windows") {
         stop(config, init_system)?;
         start(config, init_system)?;
-        println!("✅ Service restarted");
+        println!("✅ {SERVICE_DISPLAY_NAME} restarted");
         return Ok(());
     }
 
@@ -222,21 +264,23 @@ fn restart_linux(init_system: InitSystem) -> Result<()> {
     match init_system {
         InitSystem::Systemd => {
             run_checked(Command::new("systemctl").args(["--user", "daemon-reload"]))?;
-            run_checked(Command::new("systemctl").args(["--user", "restart", "redhorse.service"]))?;
+            run_systemd_action("restart")?;
         }
         InitSystem::Openrc => {
-            run_checked(Command::new("rc-service").args(["redhorse", "restart"]))?;
+            run_openrc_action("restart")?;
         }
         InitSystem::Auto => unreachable!("Auto should be resolved before this point"),
     }
-    println!("✅ Service restarted");
+    println!("✅ {SERVICE_DISPLAY_NAME} restarted");
     Ok(())
 }
 
 fn status(config: &Config, init_system: InitSystem) -> Result<()> {
     if cfg!(target_os = "macos") {
         let out = run_capture(Command::new("launchctl").arg("list"))?;
-        let running = out.lines().any(|line| line.contains(SERVICE_LABEL));
+        let running = out
+            .lines()
+            .any(|line| line.contains(SERVICE_LABEL) || line.contains(LEGACY_SERVICE_LABEL));
         println!(
             "Service: {}",
             if running {
@@ -258,7 +302,16 @@ fn status(config: &Config, init_system: InitSystem) -> Result<()> {
         let _ = config;
         let task_name = windows_task_name();
         let out =
-            run_capture(Command::new("schtasks").args(["/Query", "/TN", task_name, "/FO", "LIST"]));
+            run_capture(Command::new("schtasks").args(["/Query", "/TN", task_name, "/FO", "LIST"]))
+                .or_else(|_| {
+                    run_capture(Command::new("schtasks").args([
+                        "/Query",
+                        "/TN",
+                        legacy_windows_task_name(),
+                        "/FO",
+                        "LIST",
+                    ]))
+                });
         match out {
             Ok(text) => {
                 let running = text.contains("Running");
@@ -285,20 +338,16 @@ fn status(config: &Config, init_system: InitSystem) -> Result<()> {
 fn status_linux(config: &Config, init_system: InitSystem) -> Result<()> {
     match init_system {
         InitSystem::Systemd => {
-            let out = run_capture(Command::new("systemctl").args([
-                "--user",
-                "is-active",
-                "redhorse.service",
-            ]))
-            .unwrap_or_else(|_| "unknown".into());
+            let out = systemd_status_output().unwrap_or_else(|_| "unknown".into());
             println!("Service state: {}", out.trim());
             println!("Unit: {}", linux_service_file(config)?.display());
+            println!("Legacy alias: {LEGACY_SYSTEMD_UNIT_NAME}");
         }
         InitSystem::Openrc => {
-            let out = run_capture(Command::new("rc-service").args(["redhorse", "status"]))
-                .unwrap_or_else(|_| "unknown".into());
+            let out = openrc_status_output().unwrap_or_else(|_| "unknown".into());
             println!("Service state: {}", out.trim());
-            println!("Unit: /etc/init.d/redhorse");
+            println!("Unit: /etc/init.d/{OPENRC_SERVICE_NAME}");
+            println!("Legacy alias: /etc/init.d/{LEGACY_OPENRC_SERVICE_NAME}");
         }
         InitSystem::Auto => unreachable!("Auto should be resolved before this point"),
     }
@@ -314,7 +363,12 @@ fn uninstall(config: &Config, init_system: InitSystem) -> Result<()> {
             fs::remove_file(&file)
                 .with_context(|| format!("Failed to remove {}", file.display()))?;
         }
-        println!("✅ Service uninstalled ({})", file.display());
+        let legacy_file = legacy_macos_service_file()?;
+        if legacy_file.exists() {
+            fs::remove_file(&legacy_file)
+                .with_context(|| format!("Failed to remove {}", legacy_file.display()))?;
+        }
+        println!("✅ {SERVICE_DISPLAY_NAME} uninstalled ({})", file.display());
         return Ok(());
     }
 
@@ -324,19 +378,38 @@ fn uninstall(config: &Config, init_system: InitSystem) -> Result<()> {
     }
 
     if cfg!(target_os = "windows") {
-        let task_name = windows_task_name();
-        let _ = run_checked(Command::new("schtasks").args(["/Delete", "/TN", task_name, "/F"]));
+        let _ = run_checked(Command::new("schtasks").args([
+            "/Delete",
+            "/TN",
+            windows_task_name(),
+            "/F",
+        ]));
+        let _ = run_checked(Command::new("schtasks").args([
+            "/Delete",
+            "/TN",
+            legacy_windows_task_name(),
+            "/F",
+        ]));
         // Remove the wrapper script
         let wrapper = config
             .config_path
             .parent()
             .map_or_else(|| PathBuf::from("."), PathBuf::from)
             .join("logs")
-            .join("redhorse-daemon.cmd");
+            .join(WINDOWS_WRAPPER_NAME);
         if wrapper.exists() {
             fs::remove_file(&wrapper).ok();
         }
-        println!("✅ Service uninstalled");
+        let legacy_wrapper = config
+            .config_path
+            .parent()
+            .map_or_else(|| PathBuf::from("."), PathBuf::from)
+            .join("logs")
+            .join(LEGACY_WINDOWS_WRAPPER_NAME);
+        if legacy_wrapper.exists() {
+            fs::remove_file(&legacy_wrapper).ok();
+        }
+        println!("✅ {SERVICE_DISPLAY_NAME} uninstalled");
         return Ok(());
     }
 
@@ -351,23 +424,34 @@ fn uninstall_linux(config: &Config, init_system: InitSystem) -> Result<()> {
                 fs::remove_file(&file)
                     .with_context(|| format!("Failed to remove {}", file.display()))?;
             }
+            let legacy_file = legacy_linux_service_file(config)?;
+            if legacy_file.exists() {
+                fs::remove_file(&legacy_file)
+                    .with_context(|| format!("Failed to remove {}", legacy_file.display()))?;
+            }
             let _ = run_checked(Command::new("systemctl").args(["--user", "daemon-reload"]));
-            println!("✅ Service uninstalled ({})", file.display());
+            println!("✅ {SERVICE_DISPLAY_NAME} uninstalled ({})", file.display());
         }
         InitSystem::Openrc => {
-            let init_script = Path::new("/etc/init.d/redhorse");
-            if init_script.exists() {
+            for service_name in [OPENRC_SERVICE_NAME, LEGACY_OPENRC_SERVICE_NAME] {
                 if let Err(err) =
-                    run_checked(Command::new("rc-update").args(["del", "redhorse", "default"]))
+                    run_checked(Command::new("rc-update").args(["del", service_name, "default"]))
                 {
                     eprintln!(
-                        "⚠️  Warning: Could not remove redhorse from OpenRC default runlevel: {err}"
+                        "⚠️  Warning: Could not remove {service_name} from OpenRC default runlevel: {err}"
                     );
                 }
-                fs::remove_file(init_script)
-                    .with_context(|| format!("Failed to remove {}", init_script.display()))?;
             }
-            println!("✅ Service uninstalled (/etc/init.d/redhorse)");
+            for init_script in [
+                Path::new("/etc/init.d/redclaw"),
+                Path::new("/etc/init.d/redhorse"),
+            ] {
+                if init_script.exists() {
+                    fs::remove_file(init_script)
+                        .with_context(|| format!("Failed to remove {}", init_script.display()))?;
+                }
+            }
+            println!("✅ {SERVICE_DISPLAY_NAME} uninstalled (/etc/init.d/{OPENRC_SERVICE_NAME})");
         }
         InitSystem::Auto => unreachable!("Auto should be resolved before this point"),
     }
@@ -421,8 +505,12 @@ fn install_macos(config: &Config) -> Result<()> {
     );
 
     fs::write(&file, plist)?;
-    println!("✅ Installed launchd service: {}", file.display());
-    println!("   Start with: redhorse service start");
+    println!(
+        "✅ Installed launchd service for {SERVICE_DISPLAY_NAME}: {}",
+        file.display()
+    );
+    println!("   Legacy label still recognized during migration: {LEGACY_SERVICE_LABEL}");
+    println!("   Start with: redclaw service start");
     Ok(())
 }
 
@@ -442,15 +530,19 @@ fn install_linux_systemd(config: &Config) -> Result<()> {
 
     let exe = std::env::current_exe().context("Failed to resolve current executable")?;
     let unit = format!(
-        "[Unit]\nDescription=RedClaw daemon\nAfter=network.target\n\n[Service]\nType=simple\nExecStart={} daemon\nRestart=always\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n",
+        "[Unit]\nDescription={SERVICE_DISPLAY_NAME}\nAfter=network.target\n\n[Service]\nType=simple\nExecStart={} daemon\nRestart=always\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n",
         exe.display()
     );
 
     fs::write(&file, unit)?;
     let _ = run_checked(Command::new("systemctl").args(["--user", "daemon-reload"]));
-    let _ = run_checked(Command::new("systemctl").args(["--user", "enable", "redhorse.service"]));
-    println!("✅ Installed systemd user service: {}", file.display());
-    println!("   Start with: redhorse service start");
+    let _ = run_checked(Command::new("systemctl").args(["--user", "enable", SYSTEMD_UNIT_NAME]));
+    println!(
+        "✅ Installed systemd user service for {SERVICE_DISPLAY_NAME}: {}",
+        file.display()
+    );
+    println!("   Legacy unit alias still recognized: {LEGACY_SYSTEMD_UNIT_NAME}");
+    println!("   Start with: redclaw service start");
     Ok(())
 }
 
@@ -465,7 +557,7 @@ fn is_root() -> bool {
     false
 }
 
-/// Check if the redhorse user exists and has expected properties.
+/// Check if the compatibility user `redhorse` exists and has expected properties.
 /// Returns Ok if user doesn't exist (OpenRC will handle creation or fail gracefully).
 /// Returns error if user exists but has unexpected properties.
 fn check_redhorse_user() -> Result<()> {
@@ -511,7 +603,7 @@ fn check_redhorse_user() -> Result<()> {
 
                 if home != "/var/lib/redhorse" && home != "/nonexistent" {
                     eprintln!(
-                        "⚠️  Warning: redhorse user has home directory '{}' (expected /var/lib/redhorse or /nonexistent)",
+                        "⚠️  Warning: compatibility user 'redhorse' has home directory '{}' (expected /var/lib/redhorse or /nonexistent)",
                         home
                     );
                 }
@@ -678,7 +770,7 @@ fn resolve_invoking_user_config_dir() -> Option<PathBuf> {
                 let entry = String::from_utf8_lossy(&output.stdout);
                 let fields: Vec<&str> = entry.trim().split(':').collect();
                 if fields.len() >= 6 {
-                    return Some(PathBuf::from(fields[5]).join(".redhorse"));
+                    return Some(PathBuf::from(fields[5]).join(".redclaw"));
                 }
             }
         }
@@ -687,7 +779,7 @@ fn resolve_invoking_user_config_dir() -> Option<PathBuf> {
     std::env::var("HOME")
         .ok()
         .map(PathBuf::from)
-        .map(|home| home.join(".redhorse"))
+        .map(|home| home.join(".redclaw"))
 }
 
 fn migrate_openrc_runtime_state_if_needed(config_dir: &Path) -> Result<()> {
@@ -731,7 +823,7 @@ fn build_openrc_writability_probe_command(path: &Path, has_runuser: bool) -> (St
             "runuser".to_string(),
             vec![
                 "-u".to_string(),
-                "redhorse".to_string(),
+                LEGACY_OPENRC_SERVICE_NAME.to_string(),
                 "--".to_string(),
                 "sh".to_string(),
                 "-c".to_string(),
@@ -774,8 +866,8 @@ fn ensure_openrc_runtime_path_writable(path: &Path) -> Result<()> {
             stderr.trim()
         };
         bail!(
-            "OpenRC runtime user 'redhorse' cannot write {} ({details}). \
-             Re-run `sudo redhorse service install` and ensure ownership is redhorse:redhorse.",
+            "OpenRC compatibility user 'redhorse' cannot write {} ({details}). \
+             Re-run `sudo redclaw service install` and ensure ownership is redhorse:redhorse.",
             path.display(),
         );
     }
@@ -811,7 +903,7 @@ fn warn_if_binary_in_home(exe_path: &Path) {
         eprintln!(
             "⚠️  Warning: Binary path '{}' appears to be in a user home directory.\n\
              For system-wide OpenRC service, consider installing to /usr/local/bin:\n\
-             sudo cp '{}' /usr/local/bin/redhorse",
+             sudo cp '{}' /usr/local/bin/redclaw",
             exe_path.display(),
             exe_path.display()
         );
@@ -823,7 +915,7 @@ fn generate_openrc_script(exe_path: &Path, config_dir: &Path) -> String {
     format!(
         r#"#!/sbin/openrc-run
 
-name="redhorse"
+name="redclaw"
 description="RedClaw daemon"
 
 command="{}"
@@ -832,8 +924,8 @@ command_background="yes"
 command_user="redhorse:redhorse"
 pidfile="/run/${{RC_SVCNAME}}.pid"
 umask 027
-output_log="/var/log/redhorse/access.log"
-error_log="/var/log/redhorse/error.log"
+output_log="/var/log/redclaw/access.log"
+error_log="/var/log/redclaw/error.log"
 
 depend() {{
     need net
@@ -846,7 +938,7 @@ depend() {{
 }
 
 fn resolve_openrc_executable() -> Result<PathBuf> {
-    let preferred = Path::new("/usr/local/bin/redhorse");
+    let preferred = Path::new("/usr/local/bin/redclaw");
     if preferred.exists() {
         return Ok(preferred.to_path_buf());
     }
@@ -859,7 +951,7 @@ fn install_linux_openrc(config: &Config) -> Result<()> {
     if !is_root() {
         bail!(
             "OpenRC service installation requires root privileges.\n\
-             Please run with sudo: sudo redhorse service install"
+             Please run with sudo: sudo redclaw service install"
         );
     }
 
@@ -868,9 +960,9 @@ fn install_linux_openrc(config: &Config) -> Result<()> {
     let exe = resolve_openrc_executable()?;
     warn_if_binary_in_home(&exe);
 
-    let config_dir = Path::new("/etc/redhorse");
+    let config_dir = Path::new(OPENRC_CONFIG_DIR);
     let workspace_dir = config_dir.join("workspace");
-    let log_dir = Path::new("/var/log/redhorse");
+    let log_dir = Path::new(OPENRC_LOG_DIR);
 
     if !config_dir.exists() {
         fs::create_dir_all(config_dir)
@@ -956,7 +1048,7 @@ fn install_linux_openrc(config: &Config) -> Result<()> {
     }
 
     let init_script = generate_openrc_script(&exe, config_dir);
-    let init_path = Path::new("/etc/init.d/redhorse");
+    let init_path = Path::new("/etc/init.d/redclaw");
     fs::write(init_path, init_script)
         .with_context(|| format!("Failed to write {}", init_path.display()))?;
 
@@ -967,10 +1059,13 @@ fn install_linux_openrc(config: &Config) -> Result<()> {
             .with_context(|| format!("Failed to set permissions on {}", init_path.display()))?;
     }
 
-    run_checked(Command::new("rc-update").args(["add", "redhorse", "default"]))?;
-    println!("✅ Installed OpenRC service: /etc/init.d/redhorse");
-    println!("   Config path: /etc/redhorse/config.toml");
-    println!("   Start with: sudo redhorse service start");
+    run_checked(Command::new("rc-update").args(["add", OPENRC_SERVICE_NAME, "default"]))?;
+    println!(
+        "✅ Installed OpenRC service for {SERVICE_DISPLAY_NAME}: /etc/init.d/{OPENRC_SERVICE_NAME}"
+    );
+    println!("   Config path: {OPENRC_CONFIG_DIR}/config.toml");
+    println!("   Legacy service alias still recognized: /etc/init.d/{LEGACY_OPENRC_SERVICE_NAME}");
+    println!("   Start with: sudo redclaw service start");
     let _ = config;
     Ok(())
 }
@@ -985,7 +1080,7 @@ fn install_windows(config: &Config) -> Result<()> {
     fs::create_dir_all(&logs_dir)?;
 
     // Create a wrapper script that redirects output to log files
-    let wrapper = logs_dir.join("redhorse-daemon.cmd");
+    let wrapper = logs_dir.join(WINDOWS_WRAPPER_NAME);
     let stdout_log = logs_dir.join("daemon.stdout.log");
     let stderr_log = logs_dir.join("daemon.stderr.log");
 
@@ -1017,10 +1112,17 @@ fn install_windows(config: &Config) -> Result<()> {
         "/F",
     ]))?;
 
-    println!("✅ Installed Windows scheduled task: {}", task_name);
+    println!(
+        "✅ Installed Windows scheduled task for {SERVICE_DISPLAY_NAME}: {}",
+        task_name
+    );
     println!("   Wrapper: {}", wrapper.display());
+    println!(
+        "   Legacy task alias still recognized: {}",
+        legacy_windows_task_name()
+    );
     println!("   Logs: {}", logs_dir.display());
-    println!("   Start with: redhorse service start");
+    println!("   Start with: redclaw service start");
     Ok(())
 }
 
@@ -1034,6 +1136,16 @@ fn macos_service_file() -> Result<PathBuf> {
         .join(format!("{SERVICE_LABEL}.plist")))
 }
 
+fn legacy_macos_service_file() -> Result<PathBuf> {
+    let home = directories::UserDirs::new()
+        .map(|u| u.home_dir().to_path_buf())
+        .context("Could not find home directory")?;
+    Ok(home
+        .join("Library")
+        .join("LaunchAgents")
+        .join(format!("{LEGACY_SERVICE_LABEL}.plist")))
+}
+
 fn linux_service_file(config: &Config) -> Result<PathBuf> {
     let home = directories::UserDirs::new()
         .map(|u| u.home_dir().to_path_buf())
@@ -1043,7 +1155,61 @@ fn linux_service_file(config: &Config) -> Result<PathBuf> {
         .join(".config")
         .join("systemd")
         .join("user")
-        .join("redhorse.service"))
+        .join(SYSTEMD_UNIT_NAME))
+}
+
+fn legacy_linux_service_file(config: &Config) -> Result<PathBuf> {
+    let home = directories::UserDirs::new()
+        .map(|u| u.home_dir().to_path_buf())
+        .context("Could not find home directory")?;
+    let _ = config;
+    Ok(home
+        .join(".config")
+        .join("systemd")
+        .join("user")
+        .join(LEGACY_SYSTEMD_UNIT_NAME))
+}
+
+fn run_systemd_action(action: &str) -> Result<()> {
+    let mut last_error = None;
+    for unit in [SYSTEMD_UNIT_NAME, LEGACY_SYSTEMD_UNIT_NAME] {
+        match run_checked(Command::new("systemctl").args(["--user", action, unit])) {
+            Ok(()) => return Ok(()),
+            Err(err) => last_error = Some(err),
+        }
+    }
+    Err(last_error.unwrap_or_else(|| anyhow::anyhow!("systemctl action failed")))
+}
+
+fn systemd_status_output() -> Result<String> {
+    for unit in [SYSTEMD_UNIT_NAME, LEGACY_SYSTEMD_UNIT_NAME] {
+        if let Ok(output) =
+            run_capture(Command::new("systemctl").args(["--user", "is-active", unit]))
+        {
+            return Ok(output);
+        }
+    }
+    anyhow::bail!("unable to read systemd status for canonical or legacy unit")
+}
+
+fn run_openrc_action(action: &str) -> Result<()> {
+    let mut last_error = None;
+    for service_name in [OPENRC_SERVICE_NAME, LEGACY_OPENRC_SERVICE_NAME] {
+        match run_checked(Command::new("rc-service").args([service_name, action])) {
+            Ok(()) => return Ok(()),
+            Err(err) => last_error = Some(err),
+        }
+    }
+    Err(last_error.unwrap_or_else(|| anyhow::anyhow!("OpenRC action failed")))
+}
+
+fn openrc_status_output() -> Result<String> {
+    for service_name in [OPENRC_SERVICE_NAME, LEGACY_OPENRC_SERVICE_NAME] {
+        if let Ok(output) = run_capture(Command::new("rc-service").args([service_name, "status"])) {
+            return Ok(output);
+        }
+    }
+    anyhow::bail!("unable to read OpenRC status for canonical or legacy service")
 }
 
 fn run_checked(command: &mut Command) -> Result<()> {
@@ -1111,12 +1277,12 @@ mod tests {
     fn linux_service_file_has_expected_suffix() {
         let file = linux_service_file(&Config::default()).unwrap();
         let path = file.to_string_lossy();
-        assert!(path.ends_with(".config/systemd/user/redhorse.service"));
+        assert!(path.ends_with(".config/systemd/user/redclaw.service"));
     }
 
     #[test]
     fn windows_task_name_is_constant() {
-        assert_eq!(windows_task_name(), "Redhorse Daemon");
+        assert_eq!(windows_task_name(), "RedClaw Daemon");
     }
 
     #[cfg(target_os = "windows")]
@@ -1175,22 +1341,22 @@ mod tests {
     fn generate_openrc_script_contains_required_directives() {
         use std::path::PathBuf;
 
-        let exe_path = PathBuf::from("/usr/local/bin/redhorse");
-        let script = generate_openrc_script(&exe_path, Path::new("/etc/redhorse"));
+        let exe_path = PathBuf::from("/usr/local/bin/redclaw");
+        let script = generate_openrc_script(&exe_path, Path::new("/etc/redclaw"));
 
         assert!(script.starts_with("#!/sbin/openrc-run"));
-        assert!(script.contains("name=\"redhorse\""));
+        assert!(script.contains("name=\"redclaw\""));
         assert!(script.contains("description=\"RedClaw daemon\""));
-        assert!(script.contains("command=\"/usr/local/bin/redhorse\""));
-        assert!(script.contains("command_args=\"--config-dir /etc/redhorse daemon\""));
+        assert!(script.contains("command=\"/usr/local/bin/redclaw\""));
+        assert!(script.contains("command_args=\"--config-dir /etc/redclaw daemon\""));
         assert!(!script.contains("env REDCLAW_CONFIG_DIR"));
         assert!(!script.contains("env REDCLAW_WORKSPACE"));
         assert!(script.contains("command_background=\"yes\""));
         assert!(script.contains("command_user=\"redhorse:redhorse\""));
         assert!(script.contains("pidfile=\"/run/${RC_SVCNAME}.pid\""));
         assert!(script.contains("umask 027"));
-        assert!(script.contains("output_log=\"/var/log/redhorse/access.log\""));
-        assert!(script.contains("error_log=\"/var/log/redhorse/error.log\""));
+        assert!(script.contains("output_log=\"/var/log/redclaw/access.log\""));
+        assert!(script.contains("error_log=\"/var/log/redclaw/error.log\""));
         assert!(script.contains("depend()"));
         assert!(script.contains("need net"));
         assert!(script.contains("after firewall"));
@@ -1200,14 +1366,14 @@ mod tests {
     fn warn_if_binary_in_home_detects_home_path() {
         use std::path::PathBuf;
 
-        let home_path = PathBuf::from("/home/user/.cargo/bin/redhorse");
+        let home_path = PathBuf::from("/home/user/.cargo/bin/redclaw");
         assert!(home_path.to_string_lossy().contains("/home/"));
         assert!(home_path.to_string_lossy().contains(".cargo/bin"));
 
-        let cargo_path = PathBuf::from("/home/user/.cargo/bin/redhorse");
+        let cargo_path = PathBuf::from("/home/user/.cargo/bin/redclaw");
         assert!(cargo_path.to_string_lossy().contains(".cargo/bin"));
 
-        let system_path = PathBuf::from("/usr/local/bin/redhorse");
+        let system_path = PathBuf::from("/usr/local/bin/redclaw");
         assert!(!system_path.to_string_lossy().contains("/home/"));
         assert!(!system_path.to_string_lossy().contains(".cargo/bin"));
     }
@@ -1253,7 +1419,7 @@ mod tests {
                 "/bin/sh".to_string(),
                 "-c".to_string(),
                 "test -w '/etc/redhorse/workspace'".to_string(),
-                "redhorse".to_string()
+                LEGACY_OPENRC_SERVICE_NAME.to_string()
             ]
         );
     }

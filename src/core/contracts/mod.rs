@@ -1,4 +1,4 @@
-//! Core Redhorse contracts - type-level backbone for module system.
+//! Core RedClaw contracts - type-level backbone for module system.
 //!
 //! This layer defines the canonical contract surface for:
 //! - Module manifests, dependencies, artifacts, and execution modes

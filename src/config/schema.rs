@@ -8,8 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{OnceLock, RwLock};
-#[cfg(unix)]
-use tokio::fs::File;
 use tokio::fs::{self, OpenOptions};
 use tokio::io::AsyncWriteExt;
 
@@ -4057,7 +4055,7 @@ pub(crate) fn resolve_config_dir_for_workspace(workspace_dir: &Path) -> (PathBuf
 ///
 /// This mirrors the same precedence used by `Config::load_or_init()`:
 /// `REDCLAW_CONFIG_DIR` > `REDCLAW_WORKSPACE` > active workspace marker > defaults.
-pub async fn resolve_runtime_dirs_for_onboarding() -> Result<(PathBuf, PathBuf)> {
+pub fn resolve_runtime_dirs_for_onboarding() -> Result<(PathBuf, PathBuf)> {
     let config_dir = default_config_dir()?;
     let workspace_dir = crate::config::resolve_workspace_dir_from_config_dir(&config_dir);
     Ok((config_dir, workspace_dir))
@@ -4083,21 +4081,22 @@ impl ConfigResolutionSource {
 }
 
 async fn resolve_runtime_config_dirs(
-    _default_redclaw_dir: &Path,
-    _default_workspace_dir: &Path,
+    default_redclaw_dir: &Path,
+    default_workspace_dir: &Path,
 ) -> Result<(PathBuf, PathBuf, ConfigResolutionSource)> {
     use crate::config::env::EnvInput;
 
-    let default_config_dir = default_config_dir()?;
-    let default_workspace_dir =
-        crate::config::resolve_workspace_dir_from_config_dir(&default_config_dir);
+    let default_config_dir = default_redclaw_dir.to_path_buf();
+    let default_workspace_dir = default_workspace_dir.to_path_buf();
     let env_input = EnvInput::collect();
 
     // Precedence 1: REDCLAW_CONFIG_DIR env
     if let Some(config_dir) = env_input.config_dir() {
+        let config_dir = PathBuf::from(config_dir);
+        let workspace_dir = crate::config::resolve_workspace_dir_from_config_dir(&config_dir);
         return Ok((
-            PathBuf::from(config_dir),
-            default_workspace_dir,
+            config_dir,
+            workspace_dir,
             ConfigResolutionSource::RedclawConfigDirEnv,
         ));
     }
@@ -5514,6 +5513,8 @@ mod tests {
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
     use std::path::PathBuf;
+    #[cfg(unix)]
+    use tempfile::TempDir;
     use tokio::sync::{Mutex, MutexGuard};
     use tokio::test;
     use tokio_stream::wrappers::ReadDirStream;
@@ -7457,7 +7458,7 @@ requires_openai_auth = true
         let temp_home =
             std::env::temp_dir().join(format!("redhorse_test_home_{}", uuid::Uuid::new_v4()));
         let workspace_dir = temp_home.join("workspace");
-        let legacy_config_path = temp_home.join(".redhorse").join("config.toml");
+        let canonical_config_path = temp_home.join(".redclaw").join("config.toml");
 
         let original_home = std::env::var("HOME").ok();
         std::env::set_var("HOME", &temp_home);
@@ -7466,7 +7467,7 @@ requires_openai_auth = true
         let config = Config::load_or_init().await.unwrap();
 
         assert_eq!(config.workspace_dir, workspace_dir);
-        assert_eq!(config.config_path, legacy_config_path);
+        assert_eq!(config.config_path, canonical_config_path);
         assert!(config.config_path.exists());
 
         std::env::remove_var("REDCLAW_WORKSPACE");
@@ -7503,9 +7504,10 @@ default_model = "legacy-model"
 
         let config = Config::load_or_init().await.unwrap();
 
-        assert_eq!(config.workspace_dir, workspace_dir);
-        assert_eq!(config.config_path, legacy_config_path);
-        assert_eq!(config.default_model.as_deref(), Some("legacy-model"));
+        assert_eq!(config.workspace_dir, workspace_dir.join("workspace"));
+        assert_eq!(config.config_path, workspace_dir.join("config.toml"));
+        assert_ne!(config.default_model.as_deref(), Some("legacy-model"));
+        assert!(config.config_path.exists());
 
         std::env::remove_var("REDCLAW_WORKSPACE");
         if let Some(home) = original_home {
@@ -7595,7 +7597,7 @@ default_model = "legacy-model"
         let _env_guard = env_override_lock().await;
         let temp_home =
             std::env::temp_dir().join(format!("redhorse_test_home_{}", uuid::Uuid::new_v4()));
-        let default_config_dir = temp_home.join(".redhorse");
+        let default_config_dir = temp_home.join(".redclaw");
         let custom_config_dir = temp_home.join("profiles").join("custom-profile");
         let marker_path = default_config_dir.join(ACTIVE_WORKSPACE_STATE_FILE);
 

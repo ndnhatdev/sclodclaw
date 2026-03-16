@@ -71,7 +71,6 @@ impl ModulesLock {
         // Sync directory to ensure rename is persisted
         #[cfg(unix)]
         {
-            use std::os::unix::fs::FileExt;
             if let Some(parent) = path.parent() {
                 let dir = std::fs::File::open(parent)?;
                 dir.sync_all()?;

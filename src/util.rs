@@ -17,7 +17,7 @@
 ///
 /// # Examples
 /// ```ignore
-/// use redhorse::util::truncate_with_ellipsis;
+/// use redclaw::util::truncate_with_ellipsis;
 ///
 /// // ASCII string - no truncation needed
 /// assert_eq!(truncate_with_ellipsis("hello", 10), "hello");

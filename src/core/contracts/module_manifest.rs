@@ -1,4 +1,4 @@
-//! Module manifest - canonical Redhorse module definition.
+//! Module manifest - canonical RedClaw module definition.
 
 use super::execution_mode::ExecutionMode;
 use super::module_dependency::ModuleDependency;
@@ -109,7 +109,7 @@ pub struct ManifestInstall {
     pub source: InstallSource,
 }
 
-/// Canonical manifest for a Redhorse module.
+/// Canonical manifest for a RedClaw module.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct ModuleManifest {
@@ -121,7 +121,7 @@ pub struct ModuleManifest {
     pub version: String,
     /// The kind of module.
     pub kind: ModuleKind,
-    /// Redhorse engine compatibility requirements.
+    /// Compatibility engine requirements.
     pub engine: ManifestEngine,
     /// Artifact packaging metadata.
     pub artifact: ManifestArtifact,

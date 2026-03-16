@@ -12,12 +12,13 @@ use crate::core::lifecycle::load_manifest;
 use anyhow::{anyhow, bail, Context, Result};
 use semver::{Version, VersionReq};
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 
 /// Module installer - handles install/remove/update operations.
 pub struct ModuleInstaller {
-    /// Redhorse home root (~/.redhorse)
+    /// RedClaw config root for installer state.
     home_root: PathBuf,
     /// modules.lock path
     lock_path: PathBuf,
@@ -450,7 +451,7 @@ impl ModuleInstaller {
             let mut message = format!("{} module(s) failed to update", failures.len());
             for (failed_module, failure) in failures {
                 let summary = failure.lines().next().unwrap_or(failure.as_str());
-                message.push_str(&format!("\n- {}: {}", failed_module, summary));
+                let _ = write!(message, "\n- {failed_module}: {summary}");
             }
             bail!(message);
         }
@@ -685,13 +686,13 @@ impl ModuleInstaller {
             .join(&record.id);
         let manifest_path = installed_path.join("manifest.json");
 
-        let (manifest, manifest_error) = if !manifest_path.exists() {
-            (None, None)
-        } else {
+        let (manifest, manifest_error) = if manifest_path.exists() {
             match load_manifest(&manifest_path) {
                 Ok(manifest) => (Some(manifest), None),
                 Err(error) => (None, Some(error.to_string())),
             }
+        } else {
+            (None, None)
         };
 
         ModuleDoctorState {

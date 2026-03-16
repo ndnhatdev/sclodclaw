@@ -2075,7 +2075,7 @@ async fn persist_workspace_selection(config_path: &Path) -> Result<()> {
 
 async fn setup_workspace() -> Result<(PathBuf, PathBuf)> {
     let (default_config_dir, default_workspace_dir) =
-        crate::config::schema::resolve_runtime_dirs_for_onboarding().await?;
+        crate::config::schema::resolve_runtime_dirs_for_onboarding()?;
 
     print_bullet(&format!(
         "Default location: {}",

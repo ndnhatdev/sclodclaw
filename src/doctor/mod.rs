@@ -133,6 +133,26 @@ pub fn run(config: &Config) -> Result<()> {
     Ok(())
 }
 
+/// Run diagnostics and print machine-readable JSON to stdout.
+pub fn run_json(config: &Config) -> Result<()> {
+    let results = diagnose(config);
+    println!("{}", serde_json::to_string_pretty(&results)?);
+    Ok(())
+}
+
+#[cfg(test)]
+mod json_tests {
+    use super::*;
+
+    #[test]
+    fn diagnose_results_serialize_to_json() {
+        let config = Config::default();
+        let results = diagnose(&config);
+        let json = serde_json::to_value(&results).expect("diagnostics should serialize");
+        assert!(json.is_array());
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ModelProbeOutcome {
     Ok,

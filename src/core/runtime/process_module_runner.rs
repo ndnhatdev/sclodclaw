@@ -236,12 +236,41 @@ fn wait_with_timeout(
 mod tests {
     use super::*;
 
+    fn timeout_command() -> (String, Vec<String>) {
+        if cfg!(windows) {
+            (
+                "cmd".to_string(),
+                vec!["/C".to_string(), "ping 127.0.0.1 -n 4 >NUL".to_string()],
+            )
+        } else {
+            (
+                "sh".to_string(),
+                vec!["-c".to_string(), "sleep 3".to_string()],
+            )
+        }
+    }
+
+    fn crash_command() -> (String, Vec<String>) {
+        if cfg!(windows) {
+            (
+                "cmd".to_string(),
+                vec!["/C".to_string(), "exit /B 3".to_string()],
+            )
+        } else {
+            (
+                "sh".to_string(),
+                vec!["-c".to_string(), "exit 3".to_string()],
+            )
+        }
+    }
+
     #[test]
     fn process_timeout_is_reported() {
+        let (command, args) = timeout_command();
         let runner = ProcessModuleRunner::new(
             "tool-shell",
-            "python",
-            vec!["-c".to_string(), "import time; time.sleep(3)".to_string()],
+            command,
+            args,
             ProcessRunnerConfig {
                 default_timeout_ms: 100,
                 cancel_grace_ms: 50,
@@ -257,10 +286,11 @@ mod tests {
 
     #[test]
     fn process_crash_is_reported() {
+        let (command, args) = crash_command();
         let runner = ProcessModuleRunner::new(
             "tool-shell",
-            "python",
-            vec!["-c".to_string(), "import sys; sys.exit(3)".to_string()],
+            command,
+            args,
             ProcessRunnerConfig::default(),
             TraceContext::default(),
         );

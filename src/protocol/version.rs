@@ -3,17 +3,12 @@
 use serde::{Deserialize, Serialize};
 
 /// Public protocol versions supported by the app/client seam.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ProtocolVersion {
     /// RedClaw public protocol v1.
     #[serde(rename = "redclaw.v1")]
+    #[default]
     RedclawV1,
-}
-
-impl Default for ProtocolVersion {
-    fn default() -> Self {
-        Self::RedclawV1
-    }
 }
 
 impl ProtocolVersion {

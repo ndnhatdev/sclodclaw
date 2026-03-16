@@ -108,6 +108,15 @@ pub fn canonical_env_note() -> String {
 mod tests {
     use super::*;
     use std::env;
+    use std::sync::{Mutex, OnceLock};
+
+    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("env lock poisoned")
+    }
 
     fn cleanup_env(vars: &[&str]) {
         for var in vars {
@@ -117,6 +126,7 @@ mod tests {
 
     #[test]
     fn test_collect_no_env_vars() {
+        let _guard = env_lock();
         let vars = ["REDCLAW_CONFIG_DIR", "REDCLAW_WORKSPACE"];
         cleanup_env(&vars);
 
@@ -126,6 +136,7 @@ mod tests {
 
     #[test]
     fn test_collect_canonical_vars() {
+        let _guard = env_lock();
         let vars = ["REDCLAW_CONFIG_DIR", "REDCLAW_WORKSPACE"];
         cleanup_env(&vars);
 
@@ -144,6 +155,7 @@ mod tests {
 
     #[test]
     fn test_trim_and_empty_filter() {
+        let _guard = env_lock();
         let vars = ["REDCLAW_CONFIG_DIR"];
         cleanup_env(&vars);
 
@@ -156,8 +168,10 @@ mod tests {
 
     #[test]
     fn test_legacy_vars_ignored() {
+        let _guard = env_lock();
         let vars = [
             "REDCLAW_CONFIG_DIR",
+            "REDCLAW_WORKSPACE",
             "REDHORSE_CONFIG_DIR",
             "ZEROCLAW_CONFIG_DIR",
         ];
