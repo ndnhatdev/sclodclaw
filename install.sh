@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Redhorse installer
+# RedClaw installer
 # POSIX preamble: ensure bash is available, then re-exec under bash.
 set -eu
 

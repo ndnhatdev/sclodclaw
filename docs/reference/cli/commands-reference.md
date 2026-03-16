@@ -2,31 +2,40 @@
 
 This reference is derived from the current CLI surface (`redclaw --help`).
 
-Last verified: **February 21, 2026**.
+Last verified: **March 16, 2026**.
 
 ## Top-Level Commands
 
-| Command | Purpose |
-|---|---|
-| `onboard` | Initialize workspace/config quickly or interactively |
-| `agent` | Run interactive chat or single-message mode |
-| `gateway` | Start webhook and WhatsApp HTTP gateway |
-| `daemon` | Start supervised runtime (gateway + channels + optional heartbeat/scheduler) |
-| `service` | Manage user-level OS service lifecycle |
-| `doctor` | Run diagnostics and freshness checks |
-| `status` | Print current configuration and system summary |
-| `estop` | Engage/resume emergency stop levels and inspect estop state |
-| `cron` | Manage scheduled tasks |
-| `models` | Refresh provider model catalogs |
-| `providers` | List provider IDs, aliases, and active provider |
-| `channel` | Manage channels and channel health checks |
-| `integrations` | Inspect integration details |
-| `skills` | List/install/remove skills |
-| `migrate` | Import from external runtimes (currently OpenClaw) |
-| `config` | Export machine-readable config schema |
-| `completions` | Generate shell completion scripts to stdout |
-| `hardware` | Discover and introspect USB hardware |
-| `peripheral` | Configure and flash peripherals |
+Maturity labels used here:
+
+- `stable` - real command family with user-facing value today
+- `experimental` - real but narrow or still evolving
+- `scaffolded/redirected` - exposed on the surface, but not yet a full first-class flow
+
+| Command | Purpose | Maturity | Notes |
+|---|---|---|---|
+| `onboard` | Initialize workspace/config quickly or interactively | `stable` | some setup debt remains |
+| `agent` | Run interactive chat or single-message mode | `stable` | |
+| `gateway` | Start webhook and WhatsApp HTTP gateway | `stable` | |
+| `daemon` | Start supervised runtime (gateway + channels + optional heartbeat/scheduler) | `stable` | |
+| `service` | Manage daemon service lifecycle across supported init systems | `stable` | RedClaw naming is canonical; legacy Redhorse names remain compatibility aliases |
+| `doctor` | Run diagnostics and freshness checks | `stable` | baseline `doctor --json` is now available |
+| `status` | Print runtime/configuration summary for the current environment | `stable` | `status --json` is now available |
+| `estop` | Engage/resume emergency stop levels and inspect estop state | `stable` | terse operator naming remains |
+| `cron` | Manage scheduled tasks | `stable` | |
+| `models` | Refresh provider model catalogs | `stable` | |
+| `providers` | List provider IDs, aliases, and active provider | `experimental` | thin read-only catalog; `providers --json` is available |
+| `channel` | Manage channels and channel health checks | `stable` | `add/remove` are still redirected setup paths |
+| `integrations` | Inspect one integration and setup hints | `experimental` | narrow-but-real (`info <name>` only) |
+| `skills` | List/install/remove skills | `stable` | |
+| `migrate` | Import from external runtimes (currently OpenClaw) | `experimental` | partial migration surface |
+| `auth` | Manage provider authentication profiles | `stable` | previously missing from this top-level table |
+| `hardware` | Experimental hardware discovery surface | `scaffolded/redirected` | command family is visible for discoverability but currently scaffolded |
+| `peripheral` | Experimental peripheral management surface | `scaffolded/redirected` | command family is visible for discoverability but currently scaffolded |
+| `memory` | List/get/stats/clear stored memory entries | `stable` | pragmatic read/write utility surface |
+| `config` | Export machine-readable config schema | `stable` | intentionally focused (`schema` only) |
+| `modules` | Manage install/update/doctor flows for modules | `stable` | parser/help normalization still in progress |
+| `completions` | Generate shell completion scripts to stdout | `stable` | stdout-only by contract |
 
 ## Command Groups
 
@@ -94,6 +103,8 @@ Notes:
 - `redclaw service status`
 - `redclaw service uninstall`
 
+RedClaw-facing service names are canonical in help/docs. If an older installation still uses a legacy service identifier, the runtime treats it as a compatibility alias rather than the public contract.
+
 ### `cron`
 
 - `redclaw cron list`
@@ -121,11 +132,28 @@ Notes:
 ### `doctor`
 
 - `redclaw doctor`
+- `redclaw doctor --json`
 - `redclaw doctor models [--provider <ID>] [--use-cache]`
 - `redclaw doctor traces [--limit <N>] [--event <TYPE>] [--contains <TEXT>]`
 - `redclaw doctor traces --id <TRACE_ID>`
 
 `doctor traces` reads runtime tool/model diagnostics from `observability.runtime_trace_path`.
+
+`doctor --json` prints the baseline diagnostics as structured JSON. Subcommands keep their existing human-oriented output today.
+
+### `status`
+
+- `redclaw status`
+- `redclaw status --json`
+
+`status --json` prints a machine-readable snapshot of the same runtime/config summary shown in human mode.
+
+### `providers`
+
+- `redclaw providers`
+- `redclaw providers --json`
+
+`providers` is real and useful today, but it remains a thin read-only surface. `providers --json` prints the provider catalog and active marker as structured JSON.
 
 ### `channel`
 
@@ -157,6 +185,8 @@ Channel runtime also watches `config.toml` and hot-applies updates to:
 
 - `redclaw integrations info <name>`
 
+`integrations` is currently a narrow-but-real surface: `info <name>` works, but there is no list/search flow yet.
+
 ### `skills`
 
 - `redclaw skills list`
@@ -180,11 +210,23 @@ Skill manifests (`SKILL.toml`) support `prompts` and `[[tools]]`; both are injec
 
 - `redclaw migrate openclaw [--source <path>] [--dry-run]`
 
+### `auth`
+
+- `redclaw auth login --provider <openai-codex|gemini> [--profile <name>] [--device-code]`
+- `redclaw auth paste-redirect --provider <openai-codex> [--profile <name>] [--input <value>]`
+- `redclaw auth paste-token --provider <anthropic> [--profile <name>] [--token <value>] [--auth-kind <kind>]`
+- `redclaw auth setup-token --provider <anthropic> [--profile <name>]`
+- `redclaw auth refresh --provider <openai-codex> [--profile <name>]`
+- `redclaw auth logout --provider <id> [--profile <name>]`
+- `redclaw auth use --provider <id> --profile <name>`
+- `redclaw auth list`
+- `redclaw auth status`
+
 ### `config`
 
 - `redclaw config schema`
 
-`config schema` prints a JSON Schema (draft 2020-12) for the full `config.toml` contract to stdout.
+`config` is intentionally focused today: `schema` prints a JSON Schema (draft 2020-12) for the full `config.toml` contract to stdout.
 
 ### `completions`
 
@@ -202,6 +244,8 @@ Skill manifests (`SKILL.toml`) support `prompts` and `[[tools]]`; both are injec
 - `redclaw hardware introspect <path>`
 - `redclaw hardware info [--chip <chip_name>]`
 
+This command family is currently scaffolded. The surface remains visible for discoverability, but handlers may still return placeholder output rather than a full hardware workflow.
+
 ### `peripheral`
 
 - `redclaw peripheral list`
@@ -209,6 +253,30 @@ Skill manifests (`SKILL.toml`) support `prompts` and `[[tools]]`; both are injec
 - `redclaw peripheral flash [--port <serial_port>]`
 - `redclaw peripheral setup-uno-q [--host <ip_or_host>]`
 - `redclaw peripheral flash-nucleo`
+
+This command family is currently scaffolded. The surface remains visible for discoverability, but handlers may still return placeholder output rather than a full peripheral workflow.
+
+### `memory`
+
+- `redclaw memory list [--category <name>] [--session <id>] [--limit <n>] [--offset <n>]`
+- `redclaw memory get <key>`
+- `redclaw memory stats`
+- `redclaw memory clear [--key <prefix>] [--category <name>] [--yes]`
+
+`memory` is a stable utility surface for inspecting and pruning stored entries. It is intentionally pragmatic (operator-facing text output), not yet a full machine-readable contract for every subcommand.
+
+### `modules`
+
+- `redclaw modules list`
+- `redclaw modules info <module-id>`
+- `redclaw modules install <source> [--enable]`
+- `redclaw modules remove <module-id>`
+- `redclaw modules enable <module-id>`
+- `redclaw modules disable <module-id>`
+- `redclaw modules update [<module-id>] [--all]`
+- `redclaw modules doctor`
+
+`modules` is a real command family today, but its help/parser path is still being normalized into the main CLI pipeline.
 
 ## Validation Tip
 

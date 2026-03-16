@@ -130,7 +130,7 @@ Use this board for important notices (breaking changes, security advisories, mai
 ### Why teams pick RedClaw
 
 - **Lean by default:** small Rust binary, fast startup, low memory footprint.
-- **Secure by design:** pairing, strict sandboxing, explicit allowlists, workspace scoping.
+- **Secure by design:** pairing, explicit allowlists, workspace scoping, and host-dependent sandbox adapters.
 - **Fully swappable:** core systems are traits (providers, channels, tools, memory, tunnels).
 - **No lock-in:** OpenAI-compatible provider support + pluggable custom endpoints.
 
@@ -1019,20 +1019,22 @@ See [aieos.org](https://aieos.org) for the full schema and live examples.
 | `agent`                                       | Interactive or single-message chat mode                                              |
 | `gateway`                                     | Start webhook server (default: `127.0.0.1:42617`)                                    |
 | `daemon`                                      | Start long-running autonomous runtime                                                |
-| `service install/start/stop/status/uninstall` | Manage background service (systemd user-level or OpenRC system-wide)                 |
+| `service install/start/stop/status/uninstall` | Manage daemon service lifecycle across systemd/OpenRC/launchd/Windows tasking        |
 | `doctor`                                      | Diagnose daemon/scheduler/channel freshness                                          |
-| `status`                                      | Show full system status                                                              |
+| `status`                                      | Show runtime and configuration status summary                                         |
 | `estop`                                       | Engage/resume emergency-stop levels and view estop status                            |
 | `cron`                                        | Manage scheduled tasks (`list/add/add-at/add-every/once/remove/update/pause/resume`) |
 | `models`                                      | Refresh provider model catalogs (`models refresh`)                                   |
-| `providers`                                   | List supported providers and aliases                                                 |
+| `providers`                                   | List supported providers, aliases, and active default                                |
 | `channel`                                     | List/start/doctor channels and bind Telegram identities                              |
-| `integrations`                                | Inspect integration setup details                                                    |
+| `integrations`                                | Inspect setup/status for one integration (`info <name>`)                             |
 | `skills`                                      | List/install/remove skills                                                           |
 | `migrate`                                     | Import data from other runtimes (`migrate openclaw`)                                 |
+| `memory`                                      | List/get/stats/clear stored memory entries                                           |
+| `config`                                      | Export config contract via JSON Schema (`config schema`)                             |
 | `completions`                                 | Generate shell completion scripts (`bash`, `fish`, `zsh`, `powershell`, `elvish`)    |
-| `hardware`                                    | USB discover/introspect/info commands                                                |
-| `peripheral`                                  | Manage and flash hardware peripherals                                                |
+| `hardware`                                    | Experimental hardware discovery surface (currently scaffolded)                        |
+| `peripheral`                                  | Experimental peripheral management surface (currently scaffolded)                     |
 
 For a task-oriented command guide, see [`docs/reference/cli/commands-reference.md`](docs/reference/cli/commands-reference.md).
 
