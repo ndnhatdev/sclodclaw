@@ -102,11 +102,11 @@ Examples:
   ./install.sh --docker
 
   # Remote one-liner
-  curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/single-owner-history-clean/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/ndnhatdev/sclodclaw/master/install.sh | bash
 
 Environment:
   REDCLAW_CONTAINER_CLI     Container CLI command (default: docker; auto-fallback: podman)
-  REDCLAW_GIT_REF           Git branch or tag to clone for bootstrap (default: single-owner-history-clean)
+  REDCLAW_GIT_REF           Git branch or tag to clone for bootstrap (default: master)
   REDCLAW_DOCKER_DATA_DIR   Host path for Docker config/workspace persistence
   REDCLAW_DOCKER_IMAGE      Docker image tag to build/run (default: redclaw-bootstrap:local)
   REDCLAW_API_KEY           Used when --api-key is not provided
@@ -769,7 +769,7 @@ SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" >/dev/null 2>&1 && pwd || pwd)"
 ROOT_DIR="$SCRIPT_DIR"
 REPO_URL="https://github.com/ndnhatdev/sclodclaw.git"
-REPO_REF="${REDCLAW_GIT_REF:-single-owner-history-clean}"
+REPO_REF="${REDCLAW_GIT_REF:-master}"
 ORIGINAL_ARG_COUNT=$#
 GUIDED_MODE="auto"
 
@@ -967,7 +967,17 @@ if [[ ! -f "$WORK_DIR/Cargo.toml" ]]; then
   if [[ -z "$WORK_DIR" || "$WORK_DIR" == "$ROOT_DIR" ]]; then
     TEMP_DIR="$(mktemp -d -t redclaw-bootstrap-XXXXXX)"
     info "No local RedClaw repository detected; cloning ref '$REPO_REF'"
-    git clone --depth 1 --branch "$REPO_REF" "$REPO_URL" "$TEMP_DIR"
+    if ! git clone --depth 1 --branch "$REPO_REF" "$REPO_URL" "$TEMP_DIR"; then
+      if [[ "$REPO_REF" != "master" ]]; then
+        warn "Failed to clone ref '$REPO_REF'. Retrying with fallback ref 'master'."
+        rm -rf "$TEMP_DIR"
+        TEMP_DIR="$(mktemp -d -t redclaw-bootstrap-XXXXXX)"
+        git clone --depth 1 --branch "master" "$REPO_URL" "$TEMP_DIR"
+      else
+        error "Failed to clone repository ref '$REPO_REF'."
+        exit 1
+      fi
+    fi
     WORK_DIR="$TEMP_DIR"
     TEMP_CLONE=true
   fi
@@ -1075,6 +1085,11 @@ elif [[ -x "$HOME/.cargo/bin/redclaw" ]]; then
   REDCLAW_BIN="$HOME/.cargo/bin/redclaw"
 elif [[ -x "$WORK_DIR/target/release/redclaw" ]]; then
   REDCLAW_BIN="$WORK_DIR/target/release/redclaw"
+fi
+
+if [[ -x "$HOME/.cargo/bin/redclaw" ]] && ! have_cmd redclaw; then
+  warn "redclaw was installed to '$HOME/.cargo/bin' but that directory is not in PATH for this shell."
+  warn "Run: export PATH=\"$HOME/.cargo/bin:$PATH\""
 fi
 
 if [[ "$RUN_ONBOARD" == true ]]; then
