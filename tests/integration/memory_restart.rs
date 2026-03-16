@@ -6,8 +6,8 @@
 //! Tests SqliteMemory deduplication on restart, session scoping, concurrent
 //! message ordering, and recall behavior after re-initialization.
 
-use redhorse::memory::sqlite::SqliteMemory;
-use redhorse::memory::traits::{Memory, MemoryCategory};
+use redclaw::memory::sqlite::SqliteMemory;
+use redclaw::memory::traits::{Memory, MemoryCategory};
 use std::sync::Arc;
 
 // ─────────────────────────────────────────────────────────────────────────────

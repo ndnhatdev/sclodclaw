@@ -5,7 +5,7 @@
 //! behavior through the public API surface: configuration defaults, autonomy
 //! config validation, and credential scrubbing patterns.
 
-use redhorse::config::{AutonomyConfig, Config};
+use redclaw::config::{AutonomyConfig, Config};
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Autonomy configuration defaults and validation

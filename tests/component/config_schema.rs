@@ -3,7 +3,7 @@
 //! Validates: config defaults, backward compatibility, invalid input rejection,
 //! and gateway/security/agent config boundary conditions.
 
-use redhorse::config::{AutonomyConfig, ChannelsConfig, Config, GatewayConfig, SecurityConfig};
+use redclaw::config::{AutonomyConfig, ChannelsConfig, Config, GatewayConfig, SecurityConfig};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Invalid value fail-fast

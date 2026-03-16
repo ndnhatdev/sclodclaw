@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use redhorse::hooks::{HookHandler, HookResult, HookRunner};
-use redhorse::tools::ToolResult;
+use redclaw::hooks::{HookHandler, HookResult, HookRunner};
+use redclaw::tools::ToolResult;
 
 struct CounterHook {
     gateway_starts: Arc<AtomicUsize>,

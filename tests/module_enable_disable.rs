@@ -4,7 +4,7 @@ use redclaw::core::config::modules_lock::ModulesLock;
 use redclaw::core::contracts::ActivationPhase;
 use redclaw::core::contracts::ModuleInstallRecord;
 use redclaw::core::lifecycle::{LoaderConfig, ModuleHost};
-use redhorse::core::registry::ModuleRegistry;
+use redclaw::core::registry::ModuleRegistry;
 use std::fs;
 
 fn canonical_manifest(id: &str, kind: &str, deps: &[&str]) -> String {

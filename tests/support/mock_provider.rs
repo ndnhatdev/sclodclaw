@@ -2,8 +2,8 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use redhorse::providers::traits::{ChatMessage, TokenUsage};
-use redhorse::providers::{ChatRequest, ChatResponse, Provider, ToolCall};
+use redclaw::providers::traits::{ChatMessage, TokenUsage};
+use redclaw::providers::{ChatRequest, ChatResponse, Provider, ToolCall};
 use std::sync::{Arc, Mutex};
 
 use super::trace::{LlmTrace, TraceResponse};

@@ -2,15 +2,15 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use redhorse::agent::agent::Agent;
-use redhorse::agent::dispatcher::{NativeToolDispatcher, XmlToolDispatcher};
-use redhorse::agent::memory_loader::MemoryLoader;
-use redhorse::config::MemoryConfig;
-use redhorse::memory;
-use redhorse::memory::Memory;
-use redhorse::observability::{NoopObserver, Observer};
-use redhorse::providers::{ChatResponse, Provider, ToolCall};
-use redhorse::tools::Tool;
+use redclaw::agent::agent::Agent;
+use redclaw::agent::dispatcher::{NativeToolDispatcher, XmlToolDispatcher};
+use redclaw::agent::memory_loader::MemoryLoader;
+use redclaw::config::MemoryConfig;
+use redclaw::memory;
+use redclaw::memory::Memory;
+use redclaw::observability::{NoopObserver, Observer};
+use redclaw::providers::{ChatResponse, Provider, ToolCall};
+use redclaw::tools::Tool;
 use std::sync::Arc;
 
 /// Create an in-memory "none" backend for tests.

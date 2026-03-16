@@ -6,7 +6,7 @@
 //! Tests Config::load_or_init() with isolated temp directories, env var overrides,
 //! and config file round-trips to verify workspace discovery and persistence.
 
-use redhorse::config::{AgentConfig, Config, MemoryConfig};
+use redclaw::config::{AgentConfig, Config, MemoryConfig};
 use std::fs;
 
 // ─────────────────────────────────────────────────────────────────────────────

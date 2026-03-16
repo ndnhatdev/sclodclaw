@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use redhorse::tools::{Tool, ToolResult};
+use redclaw::tools::{Tool, ToolResult};
 use serde_json::json;
 use std::sync::{Arc, Mutex};
 

@@ -12,8 +12,8 @@ use crate::support::helpers::{
     StaticMemoryLoader,
 };
 use crate::support::{CountingTool, EchoTool, MockProvider, RecordingProvider};
-use redhorse::providers::traits::ChatMessage;
-use redhorse::providers::{ChatResponse, ConversationMessage, ToolCall};
+use redclaw::providers::traits::ChatMessage;
+use redclaw::providers::{ChatResponse, ConversationMessage, ToolCall};
 
 // ═════════════════════════════════════════════════════════════════════════════
 // E2E smoke tests — full agent turn cycle

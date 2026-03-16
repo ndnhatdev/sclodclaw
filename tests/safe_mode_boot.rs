@@ -25,7 +25,7 @@ fn canonical_manifest(id: &str, kind: &str, deps: &[&str]) -> String {
             "name": "{id}",
             "version": "0.1.0",
             "kind": "{kind}",
-            "engine": {{ "redclaw": ">=0.1.0 <0.2.0" }},
+            "engine": {{ "redhorse": ">=0.1.0 <0.2.0" }},
             "artifact": {{ "kind": "bundled", "entry": "modules/{kind}s/{id}" }},
             "execution": {{ "mode": "in_process" }},
             "trust": {{ "required": "official" }},

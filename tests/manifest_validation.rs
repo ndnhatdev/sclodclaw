@@ -8,7 +8,7 @@ use redclaw::core::contracts::{
 use redclaw::core::lifecycle::{load_manifest, validate_manifest};
 use std::fs;
 
-#[test] 
+#[test]
 fn invalid_manifest_is_rejected() {
     let invalid = ModuleManifest {
         id: String::new(),
@@ -16,7 +16,7 @@ fn invalid_manifest_is_rejected() {
         version: String::new(),
         kind: ModuleKind::Runtime,
         engine: ManifestEngine {
-            redclaw: ">=0.1.0 <0.2.0".to_string(),
+            redhorse: ">=0.1.0 <0.2.0".to_string(),
         },
         artifact: ManifestArtifact {
             kind: ArtifactKind::Bundled,

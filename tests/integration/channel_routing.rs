@@ -8,7 +8,7 @@
 //! Verifies sender/reply_target field contracts to prevent field swaps.
 
 use async_trait::async_trait;
-use redhorse::channels::traits::{Channel, ChannelMessage, SendMessage};
+use redclaw::channels::traits::{Channel, ChannelMessage, SendMessage};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ChannelMessage construction and field semantics
